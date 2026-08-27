@@ -1,0 +1,6 @@
+{
+  "name": "Gestion de Parking Privé",
+  "description": "Application complète de gestion de parking privé avec tarification automatique, gestion Garage Kospam, portefeuille financier, suivi des entrées/sorties, places, paiements, impayés, reçus imprimables et rapports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
