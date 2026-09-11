@@ -8,6 +8,8 @@ import {
   RotateCcw,
   CheckCircle,
   AlertCircle,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import { ParametresApp } from '../types';
 import { formatAriary } from '../utils/formatters';
@@ -26,8 +28,44 @@ export const ParametresTarifs: React.FC<ParametresTarifsProps> = ({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [capaciteInput, setCapaciteInput] = useState<string>(
+    String(parametres.capacite_totale || parametres.nombre_total_places || 30)
+  );
+
   const handleChange = (field: keyof ParametresApp, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCapaciteChange = (valStr: string) => {
+    setCapaciteInput(valStr);
+    const parsed = parseInt(valStr, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        capacite_totale: parsed,
+        nombre_total_places: parsed,
+      }));
+    }
+  };
+
+  const handleAdjustCapacite = (delta: number) => {
+    const current = parseInt(capaciteInput, 10) || formData.capacite_totale || 30;
+    const nextVal = Math.max(1, current + delta);
+    setCapaciteInput(String(nextVal));
+    setFormData((prev) => ({
+      ...prev,
+      capacite_totale: nextVal,
+      nombre_total_places: nextVal,
+    }));
+  };
+
+  const handleSetExactCapacite = (exact: number) => {
+    setCapaciteInput(String(exact));
+    setFormData((prev) => ({
+      ...prev,
+      capacite_totale: exact,
+      nombre_total_places: exact,
+    }));
   };
 
   const handleTarifChange = (field: keyof ParametresApp['tarifs'], value: number) => {
@@ -47,8 +85,16 @@ export const ParametresTarifs: React.FC<ParametresTarifsProps> = ({
       setErrorMsg(null);
       setSuccessMsg(null);
 
-      await onSaveParametres(formData);
-      setSuccessMsg('Paramètres et grille tarifaire mis à jour avec succès !');
+      const finalCap = Math.max(1, parseInt(capaciteInput, 10) || formData.capacite_totale || 30);
+      const payload: ParametresApp = {
+        ...formData,
+        capacite_totale: finalCap,
+        nombre_total_places: finalCap,
+      };
+
+      await onSaveParametres(payload);
+      setCapaciteInput(String(finalCap));
+      setSuccessMsg(`Paramètres mis à jour avec succès ! Capacité configurée à ${finalCap} places.`);
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Erreur lors de la sauvegarde des paramètres');
@@ -110,15 +156,73 @@ export const ParametresTarifs: React.FC<ParametresTarifsProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Capacité totale du Parking (Places)
+                Capacité totale du Parking (Nombre de places au choix)
               </label>
-              <input
-                type="number"
-                min="1"
-                value={formData.capacite_totale}
-                onChange={(e) => handleChange('capacite_totale', Number(e.target.value))}
-                className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm font-semibold"
-              />
+              <div className="flex items-center gap-1.5 mb-2">
+                <button
+                  type="button"
+                  onClick={() => handleAdjustCapacite(-5)}
+                  className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors"
+                  title="Diminuer de 5 places"
+                >
+                  -5
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustCapacite(-1)}
+                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+                  title="Diminuer de 1 place"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={capaciteInput}
+                  onChange={(e) => handleCapaciteChange(e.target.value)}
+                  placeholder="Ex: 50"
+                  className="w-full text-center px-3 py-2 border-2 border-indigo-200 focus:border-indigo-600 rounded-lg text-base font-extrabold text-slate-900 bg-indigo-50/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAdjustCapacite(1)}
+                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+                  title="Augmenter de 1 place"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustCapacite(5)}
+                  className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors"
+                  title="Augmenter de 5 places"
+                >
+                  +5
+                </button>
+              </div>
+
+              {/* Raccourcis de capacité */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] text-slate-400 font-medium mr-1">Raccourcis :</span>
+                {[10, 20, 30, 50, 75, 100, 150, 200].map((nb) => (
+                  <button
+                    key={nb}
+                    type="button"
+                    onClick={() => handleSetExactCapacite(nb)}
+                    className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all ${
+                      parseInt(capaciteInput, 10) === nb
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {nb}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1.5">
+                Vous pouvez saisir n'importe quel chiffre au choix ou utiliser les raccourcis.
+              </p>
             </div>
 
             <div>

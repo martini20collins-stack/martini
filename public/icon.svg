@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="50%" stop-color="#312e81" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#22c55e" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded squircle -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Parking Bay Border Lines subtle -->
+  <rect x="56" y="56" width="400" height="400" rx="80" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="6" stroke-dasharray="16 12" />
+
+  <!-- White Parking P Badge -->
+  <g filter="url(#glow)">
+    <circle cx="256" cy="220" r="140" fill="#ffffff" />
+    <path d="M220 130 H265 C295 130 315 148 315 178 C315 208 295 226 265 226 H245 V310 H220 Z M245 152 V204 H265 C282 204 290 194 290 178 C290 162 282 152 265 152 Z" fill="#1e1b4b" />
+  </g>
+
+  <!-- Car silhouette badge below -->
+  <g transform="translate(146, 350)">
+    <rect width="220" height="74" rx="20" fill="url(#accentGrad)" filter="url(#glow)" />
+    <!-- Car body graphic -->
+    <path d="M45 48 L60 30 C64 25 70 22 76 22 H144 C150 22 156 25 160 30 L175 48 H190 C198 48 202 52 202 58 V62 H18 V58 C18 52 22 48 30 48 Z" fill="#ffffff" />
+    <!-- Car windows -->
+    <path d="M68 30 L56 44 H105 V28 H78 C74 28 70 29 68 30 Z M115 28 V44 H164 L152 30 C150 29 146 28 142 28 Z" fill="#1e1b4b" />
+    <!-- Wheels -->
+    <circle cx="62" cy="62" r="12" fill="#1e1b4b" />
+    <circle cx="62" cy="62" r="5" fill="#ffffff" />
+    <circle cx="158" cy="62" r="12" fill="#1e1b4b" />
+    <circle cx="158" cy="62" r="5" fill="#ffffff" />
+  </g>
+</svg>

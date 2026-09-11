@@ -43,6 +43,10 @@ import { SortieRapideModal } from './components/SortieRapideModal';
 import { PaiementModal } from './components/PaiementModal';
 import { TicketRecuModal } from './components/TicketRecuModal';
 
+// PWA & Offline
+import { PWAInstallButton } from './components/PWAInstallButton';
+import { OfflineIndicator, OfflineBanner } from './components/OfflineIndicator';
+
 type MainSection = 'guichet' | 'caisse' | 'kospam' | 'parametres';
 
 export function App() {
@@ -248,7 +252,13 @@ export function App() {
         </div>
 
         {/* Header Right Actions */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          {/* Offline & Connection Indicator */}
+          <OfflineIndicator onSyncComplete={loadAllData} />
+
+          {/* PWA Install Button for Chrome */}
+          <PWAInstallButton />
+
           {/* Live Portefeuille Solde Pill */}
           <div
             onClick={() => setActiveSection('caisse')}
@@ -301,6 +311,9 @@ export function App() {
           </button>
         </div>
       </header>
+
+      {/* Bannière Hors Ligne si déconnecté */}
+      <OfflineBanner />
 
       {/* 2. BARRE D'ONGLETS PRINCIPALE (4 ONGLETS CLAIRS) */}
       <div className="bg-white border-b border-slate-200 px-4 lg:px-8">

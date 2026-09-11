@@ -451,28 +451,46 @@ class DatabaseManager {
   }
 
   public updateParametres(params: Partial<ParametresApp>): ParametresApp {
+    const rawCapacite =
+      params.capacite_totale !== undefined
+        ? params.capacite_totale
+        : params.nombre_total_places !== undefined
+        ? params.nombre_total_places
+        : this.data.parametres.capacite_totale || 30;
+
+    const capacite = Math.max(1, Math.floor(Number(rawCapacite)) || 30);
+
     this.data.parametres = {
       ...this.data.parametres,
       ...params,
+      capacite_totale: capacite,
+      nombre_total_places: capacite,
       tarifs: {
         ...this.data.parametres.tarifs,
         ...(params.tarifs || {}),
       },
     };
 
-    // If total places changed, adjust places list
-    if (params.nombre_total_places && params.nombre_total_places > 0) {
-      const targetCount = params.nombre_total_places;
-      const currentCount = this.data.places.length;
-      if (targetCount > currentCount) {
-        for (let i = currentCount + 1; i <= targetCount; i++) {
-          this.data.places.push({
-            id_place: `PLC-${String(i).padStart(3, '0')}`,
-            numero_place: `P-${String(i).padStart(2, '0')}`,
-            statut: 'Libre',
-            id_stationnement_actuel: null,
-            immatriculation_actuelle: null,
-          });
+    // Synchronisation automatique et dynamique de la liste des places réelles
+    const currentPlacesCount = this.data.places.length;
+    if (capacite > currentPlacesCount) {
+      // Création des nouvelles places libres pour atteindre la capacité demandée
+      for (let i = currentPlacesCount + 1; i <= capacite; i++) {
+        this.data.places.push({
+          id_place: `PLC-${String(i).padStart(3, '0')}`,
+          numero_place: `P-${String(i).padStart(2, '0')}`,
+          statut: 'Libre',
+          type_zone: 'Standard',
+          id_stationnement_actuel: null,
+          immatriculation_actuelle: null,
+        });
+      }
+    } else if (capacite < currentPlacesCount) {
+      // Réduction : suppression des places libres non occupées depuis la fin
+      for (let i = this.data.places.length - 1; i >= 0 && this.data.places.length > capacite; i--) {
+        const place = this.data.places[i];
+        if (place && place.statut !== 'Occupée') {
+          this.data.places.splice(i, 1);
         }
       }
     }
