@@ -11,6 +11,9 @@ import {
   Search,
   Sparkles,
   AlertCircle,
+  Sun,
+  Moon,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   Client,
@@ -20,6 +23,7 @@ import {
   CategorieVehicule,
   CATEGORIES_VEHICULES,
   TypeClient,
+  TypeStationnement,
   ParametresApp,
 } from '../types';
 import { calculerMontant } from '../services/pricingEngine';
@@ -61,6 +65,7 @@ export const EntreeVehicule: React.FC<EntreeVehiculeProps> = ({
 
   // Operation details
   const [reparation, setReparation] = useState<boolean>(false);
+  const [typeStationnement, setTypeStationnement] = useState<TypeStationnement>('Journée normale');
   const [selectedPlaceId, setSelectedPlaceId] = useState<string>('');
   const [observation, setObservation] = useState<string>('');
 
@@ -81,7 +86,8 @@ export const EntreeVehicule: React.FC<EntreeVehiculeProps> = ({
     currentClientType,
     vehiculeCategorie,
     reparation,
-    parametres.tarifs
+    parametres.tarifs,
+    typeStationnement
   );
 
   // Filter vehicles when searching immatriculation
@@ -141,6 +147,8 @@ export const EntreeVehicule: React.FC<EntreeVehiculeProps> = ({
       setLoading(true);
       const payload: any = {
         reparation,
+        type_stationnement: typeStationnement,
+        reste_la_nuit: typeStationnement === 'Nuit' || typeStationnement === 'Nuit – Parking sécurisé',
         id_place: selectedPlaceId || undefined,
         observation: observation.trim(),
       };
@@ -423,13 +431,73 @@ export const EntreeVehicule: React.FC<EntreeVehiculeProps> = ({
             </div>
           </div>
 
-          {/* STEP 3: PRESTATION & PLACE */}
+          {/* STEP 3: TYPE DE STATIONNEMENT & PRESTATION & PLACE */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/80 space-y-3">
+            <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <Sun className="w-4 h-4 text-indigo-600" />
+              <span>3. Type de Stationnement</span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setTypeStationnement('Journée normale')}
+                className={`p-3 rounded-xl border text-left font-bold transition-all ${
+                  typeStationnement === 'Journée normale'
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-950 ring-2 ring-emerald-500/20'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-emerald-700">
+                  <Sun className="w-4 h-4" />
+                  <span>Journée normale</span>
+                </div>
+                <span className="text-xs font-black text-slate-900 mt-1 block">3 000 Ar</span>
+                <span className="text-[10px] text-slate-500 font-normal">Tarif standard de jour</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTypeStationnement('Nuit')}
+                className={`p-3 rounded-xl border text-left font-bold transition-all ${
+                  typeStationnement === 'Nuit'
+                    ? 'bg-purple-50 border-purple-500 text-purple-950 ring-2 ring-purple-500/20'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-purple-700">
+                  <Moon className="w-4 h-4" />
+                  <span>Nuit</span>
+                </div>
+                <span className="text-xs font-black text-slate-900 mt-1 block">8 000 Ar</span>
+                <span className="text-[10px] text-purple-700 font-medium">3 000 + 5 000 Ar suppl.</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTypeStationnement('Nuit – Parking sécurisé')}
+                className={`p-3 rounded-xl border text-left font-bold transition-all ${
+                  typeStationnement === 'Nuit – Parking sécurisé'
+                    ? 'bg-indigo-50 border-indigo-500 text-indigo-950 ring-2 ring-indigo-500/20'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-indigo-700">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Nuit – Sécurisé</span>
+                </div>
+                <span className="text-xs font-black text-slate-900 mt-1 block">10 000 Ar</span>
+                <span className="text-[10px] text-indigo-700 font-medium">Parking haute sécurité</span>
+              </button>
+            </div>
+          </div>
+
+          {/* STEP 4: PRESTATION & PLACE */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Réparation Oui / Non */}
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
               <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-indigo-600" />
-                <span>3. Prestation Réparation</span>
+                <span>4. Prestation Réparation</span>
               </label>
               <div className="flex gap-3 pt-1">
                 <button

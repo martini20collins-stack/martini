@@ -10,7 +10,6 @@ import {
   Plus,
   Search,
   FileSpreadsheet,
-  ArrowUpRight,
   CreditCard,
 } from 'lucide-react';
 import { KospamStats, Stationnement, ParametresApp } from '../types';
@@ -22,7 +21,6 @@ interface GarageKospamProps {
   parametres: ParametresApp;
   onNavigateEntreeKospam: () => void;
   onOpenPaiement: (st: Stationnement) => void;
-  onOpenSortie: (st: Stationnement) => void;
   onShowTicket: (st: Stationnement) => void;
 }
 
@@ -32,11 +30,10 @@ export const GarageKospam: React.FC<GarageKospamProps> = ({
   parametres,
   onNavigateEntreeKospam,
   onOpenPaiement,
-  onOpenSortie,
   onShowTicket,
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [filterStatut, setFilterStatut] = useState<string>('all'); // all, Present, Sorti
+  const [filterStatut, setFilterStatut] = useState<string>('all'); // all, paye, impaye
 
   const kospamStationnements = stationnements.filter(
     (s) => s.client_type === 'Kospam' || s.client_nom?.toLowerCase().includes('kospam')
@@ -50,8 +47,11 @@ export const GarageKospam: React.FC<GarageKospamProps> = ({
       s.marque?.toLowerCase().includes(term) ||
       s.id_stationnement.toLowerCase().includes(term);
 
+    const reste = s.reste_a_payer !== undefined ? s.reste_a_payer : (s.montant_du - (s.montant_paye || 0));
     const matchStatut =
-      filterStatut === 'all' || s.statut === filterStatut;
+      filterStatut === 'all' ||
+      (filterStatut === 'paye' && reste <= 0) ||
+      (filterStatut === 'impaye' && reste > 0);
 
     return matchSearch && matchStatut;
   });
@@ -72,7 +72,7 @@ export const GarageKospam: React.FC<GarageKospamProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Suivi exclusif des entrées/sorties atelier, réparations et facturation périodique
+              Suivi exclusif des véhicules atelier, réparations et facturation périodique
             </p>
           </div>
         </div>
@@ -101,16 +101,16 @@ export const GarageKospam: React.FC<GarageKospamProps> = ({
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-            <span className="text-xs text-slate-500 font-medium block">Présents en ce moment</span>
+            <span className="text-xs text-slate-500 font-medium block">Total Enregistrés</span>
             <span className="text-2xl font-black text-slate-900 mt-1 block">
-              {stats.vehicules_presents}
+              {kospamStationnements.length}
             </span>
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-            <span className="text-xs text-slate-500 font-medium block">Véhicules sortis</span>
-            <span className="text-2xl font-black text-slate-700 mt-1 block">
-              {stats.vehicules_sortis}
+            <span className="text-xs text-emerald-600 font-medium block">Véhicules Réglés</span>
+            <span className="text-2xl font-black text-emerald-700 mt-1 block">
+              {kospamStationnements.filter((s) => (s.reste_a_payer !== undefined ? s.reste_a_payer : (s.montant_du - (s.montant_paye || 0))) <= 0).length}
             </span>
           </div>
 
@@ -225,9 +225,9 @@ export const GarageKospam: React.FC<GarageKospamProps> = ({
               onChange={(e) => setFilterStatut(e.target.value)}
               className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700"
             >
-              <option value="all">Tous statuts ({kospamStationnements.length})</option>
-              <option value="Présent">Présents uniquement</option>
-              <option value="Sorti">Sortis uniquement</option>
+              <option value="all">Tous ({kospamStationnements.length})</option>
+              <option value="paye">Réglés uniquement</option>
+              <option value="impaye">À encaisser</option>
             </select>
           </div>
         </div>
@@ -239,11 +239,11 @@ export const GarageKospam: React.FC<GarageKospamProps> = ({
                 <th className="px-5 py-3.5">Stationnement</th>
                 <th className="px-5 py-3.5">Immatriculation</th>
                 <th className="px-5 py-3.5">Véhicule & Catégorie</th>
-                <th className="px-5 py-3.5">Entrée / Sortie</th>
+                <th className="px-5 py-3.5">Date & Heure</th>
                 <th className="px-5 py-3.5">Réparation</th>
                 <th className="px-5 py-3.5">Montant Dû</th>
                 <th className="px-5 py-3.5">Payé / Reste</th>
-                <th className="px-5 py-3.5">Statut</th>
+                <th className="px-5 py-3.5">Règlement Direct</th>
                 <th className="px-5 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
@@ -309,12 +309,12 @@ export const GarageKospam: React.FC<GarageKospamProps> = ({
                     <td className="px-5 py-4">
                       <span
                         className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ${
-                          st.statut === 'Présent'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-slate-100 text-slate-700'
+                          reste <= 0
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-rose-100 text-rose-800'
                         }`}
                       >
-                        {st.statut}
+                        {reste <= 0 ? '✅ Réglé' : '⚠️ Impayé'}
                       </span>
                     </td>
 
@@ -334,15 +334,6 @@ export const GarageKospam: React.FC<GarageKospamProps> = ({
                             title="Encaisser"
                           >
                             <CreditCard className="w-4 h-4" />
-                          </button>
-                        )}
-                        {st.statut === 'Présent' && (
-                          <button
-                            onClick={() => onOpenSortie(st)}
-                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                            title="Sortie véhicule"
-                          >
-                            <ArrowUpRight className="w-4 h-4" />
                           </button>
                         )}
                       </div>

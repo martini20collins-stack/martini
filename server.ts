@@ -235,10 +235,37 @@ async function startServer() {
     }
   });
 
+  app.post('/api/stationnements', (req: Request, res: Response) => {
+    try {
+      const st = db.enregistrerEntree(req.body);
+      res.status(201).json(st);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
   app.post('/api/stationnements/entree', (req: Request, res: Response) => {
     try {
       const st = db.enregistrerEntree(req.body);
       res.status(201).json(st);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/stationnements/:id', (req: Request, res: Response) => {
+    try {
+      const st = db.updateStationnement(req.params.id, req.body);
+      res.json(st);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/stationnements/:id', (req: Request, res: Response) => {
+    try {
+      db.deleteStationnement(req.params.id);
+      res.json({ success: true, message: 'Stationnement supprimé avec succès.' });
     } catch (e: any) {
       res.status(400).json({ error: e.message });
     }
@@ -332,6 +359,67 @@ async function startServer() {
         observation,
       });
       res.status(201).json(mvt);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Trésorerie Module APIs
+  app.get('/api/tresorerie/resume', (req: Request, res: Response) => {
+    try {
+      res.json(db.getTresorerieResume());
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/tresorerie/solde-initial', (req: Request, res: Response) => {
+    try {
+      const { montant, date, observation } = req.body;
+      if (montant === undefined || isNaN(Number(montant))) {
+        return res.status(400).json({ error: 'Le montant du solde initial est requis.' });
+      }
+      const mvt = db.setSoldeInitial(Number(montant), date, observation);
+      res.json({ success: true, mouvement: mvt, solde_initial: Number(montant) });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/tresorerie/mouvements', (req: Request, res: Response) => {
+    try {
+      const { type_mouvement, montant, date, motif, categorie, observation, reference } = req.body;
+      if (!type_mouvement || !motif || montant === undefined) {
+        return res.status(400).json({ error: 'Type de mouvement, motif et montant sont requis.' });
+      }
+      const mvt = db.ajouterMouvementTresorerie({
+        type_mouvement,
+        montant: Number(montant),
+        date,
+        motif,
+        categorie,
+        observation,
+        reference,
+      });
+      res.status(201).json(mvt);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/tresorerie/mouvements/:id', (req: Request, res: Response) => {
+    try {
+      const mvt = db.updateMouvementTresorerie(req.params.id, req.body);
+      res.json(mvt);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/tresorerie/mouvements/:id', (req: Request, res: Response) => {
+    try {
+      db.deleteMouvementTresorerie(req.params.id);
+      res.json({ success: true, message: 'Mouvement supprimé avec succès.' });
     } catch (e: any) {
       res.status(400).json({ error: e.message });
     }

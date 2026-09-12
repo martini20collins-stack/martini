@@ -1,5 +1,16 @@
 export type TypeClient = 'Normal' | 'Kospam';
 
+export type TypeStationnement =
+  | 'Journée normale'
+  | 'Nuit'
+  | 'Nuit – Parking sécurisé';
+
+export const TYPES_STATIONNEMENT: TypeStationnement[] = [
+  'Journée normale',
+  'Nuit',
+  'Nuit – Parking sécurisé',
+];
+
 export type CategorieVehicule =
   | 'Véhicule léger'
   | '4x4'
@@ -38,7 +49,10 @@ export const MODES_PAIEMENT: ModePaiement[] = [
 ];
 
 export type TypeMouvement =
+  | 'Solde initial'
   | 'Encaissement parking'
+  | 'Ancienne recette'
+  | 'Ancienne dépense'
   | 'Dépense'
   | 'Autre entrée'
   | 'Autre sortie';
@@ -83,17 +97,26 @@ export interface Stationnement {
   id_vehicule: string;
   id_place?: string | null;
   date_entree: string; // YYYY-MM-DD
-  heure_entree: string; // HH:mm
+  heure_entree?: string; // HH:mm
   date_sortie?: string | null; // YYYY-MM-DD
   heure_sortie?: string | null; // HH:mm
   reparation: boolean;
-  montant_du: number;
+  type_stationnement?: TypeStationnement; // 'Journée normale' | 'Nuit' | 'Nuit – Parking sécurisé'
+  reste_la_nuit?: boolean; // Resté la nuit ? Oui / Non (suivi uniquement)
+  historique_ancien?: boolean; // Véhicule entré/sorti avant la mise en place de l'application
+  montant_du: number; // = montant_a_payer
+  montant_a_payer?: number;
   montant_paye?: number;
   reste_a_payer?: number;
+  mode_paiement?: ModePaiement;
   statut: StatutStationnement; // 'Présent' | 'Sorti'
   statut_paiement?: StatutPaiement; // 'Payé' | 'Partiellement payé' | 'Non payé'
   observation?: string;
-  // Joined fields
+  // User convenience / Joined fields
+  date?: string; // YYYY-MM-DD (alias to date_entree)
+  nom_client?: string;
+  categorie_client?: TypeClient;
+  categorie_vehicule?: CategorieVehicule;
   immatriculation?: string;
   marque?: string;
   modele?: string;
@@ -129,13 +152,17 @@ export interface MouvementPortefeuille {
   motif: string;
   observation?: string;
   id_paiement?: string;
+  categorie?: string;
 }
 
 export interface TarifsConfig {
-  stationnement_base: number; // 3000 Ar
-  majoration_reparation_normal_leger: number; // 0 Ar -> Total 3000 Ar
-  majoration_reparation_normal_autre: number; // 2000 Ar -> Total 5000 Ar (4x4, Camionnette, Bus, Camion)
-  majoration_reparation_kospam: number; // 2000 Ar -> Total 5000 Ar (Toutes catégories)
+  stationnement_base: number; // 3000 Ar (Journée normale)
+  supplement_nuit: number; // 5000 Ar (Supplément nuit)
+  nuit_normale: number; // 8000 Ar (3000 + 5000)
+  nuit_securise: number; // 10000 Ar (Nuit – Parking sécurisé)
+  majoration_reparation_normal_leger?: number; // 0 Ar -> Total 3000 Ar
+  majoration_reparation_normal_autre?: number; // 2000 Ar -> Total 5000 Ar
+  majoration_reparation_kospam?: number; // 2000 Ar -> Total 5000 Ar
   normal_sans_reparation?: number;
   normal_avec_reparation_leger?: number;
   normal_avec_reparation_autre?: number;
@@ -155,17 +182,25 @@ export interface ParametresApp {
   capacite_totale?: number;
   nombre_total_places?: number;
   message_bas_ticket?: string;
+  solde_initial?: number;
+  date_solde_initial?: string;
   tarifs: TarifsConfig;
 }
 
 export interface DashboardStats {
   vehicules_presents: number;
+  vehicules_nuit_presents?: number;
   places_occupees: number;
   places_libres: number;
   entrees_jour: number;
   sorties_jour: number;
   recettes_jour: number;
+  recettes_totales?: number;
   recettes_mois: number;
+  total_depenses?: number;
+  solde_tresorerie?: number;
+  nombre_stationnements?: number;
+  montant_restant_a_payer?: number;
   total_non_paye: number;
   total_partiellement_paye: number;
   total_a_encaisser: number;

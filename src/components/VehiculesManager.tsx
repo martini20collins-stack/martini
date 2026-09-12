@@ -509,15 +509,26 @@ export const VehiculesManager: React.FC<VehiculesManagerProps> = ({
                     <span className="font-bold text-xs text-slate-800">
                       Stationnement #{st.id_stationnement}
                     </span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        st.statut === 'Présent'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {st.statut}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {st.reste_la_nuit ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                          🌙 Resté la nuit
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                          ☀️ Jour
+                        </span>
+                      )}
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          st.statut === 'Présent'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {st.statut}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="mt-1 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-600 bg-slate-50 p-2 rounded-lg">

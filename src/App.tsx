@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   Car,
   PlusCircle,
-  ArrowUpRight,
   ParkingSquare,
   CreditCard,
   AlertCircle,
@@ -14,6 +13,7 @@ import {
   RefreshCw,
   Printer,
   Sparkles,
+  History,
 } from 'lucide-react';
 import {
   DashboardStats,
@@ -33,13 +33,14 @@ import { formatAriary } from './utils/formatters';
 
 // Simplified & Primary Components
 import { GuichetParking } from './components/GuichetParking';
+import { TresorerieManager } from './components/TresorerieManager';
 import { PaiementsManager } from './components/PaiementsManager';
 import { GarageKospam } from './components/GarageKospam';
 import { ParametresTarifs } from './components/ParametresTarifs';
 
 // Modals
 import { EntreeRapideModal } from './components/EntreeRapideModal';
-import { SortieRapideModal } from './components/SortieRapideModal';
+import { AncienVehiculeModal } from './components/AncienVehiculeModal';
 import { PaiementModal } from './components/PaiementModal';
 import { TicketRecuModal } from './components/TicketRecuModal';
 
@@ -47,7 +48,7 @@ import { TicketRecuModal } from './components/TicketRecuModal';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator, OfflineBanner } from './components/OfflineIndicator';
 
-type MainSection = 'guichet' | 'caisse' | 'kospam' | 'parametres';
+type MainSection = 'guichet' | 'tresorerie' | 'caisse' | 'kospam' | 'parametres';
 
 export function App() {
   const [activeSection, setActiveSection] = useState<MainSection>('guichet');
@@ -97,8 +98,7 @@ export function App() {
 
   // Modal states
   const [isEntreeModalOpen, setIsEntreeModalOpen] = useState<boolean>(false);
-  const [isSortieModalOpen, setIsSortieModalOpen] = useState<boolean>(false);
-  const [sortiePreselectSt, setSortiePreselectSt] = useState<Stationnement | null>(null);
+  const [isAncienModalOpen, setIsAncienModalOpen] = useState<boolean>(false);
   const [paiementModalSt, setPaiementModalSt] = useState<Stationnement | null>(null);
   const [ticketModalData, setTicketModalData] = useState<{
     stationnement: Stationnement;
@@ -160,12 +160,6 @@ export function App() {
     return res;
   };
 
-  const handleEnregistrerSortie = async (payload: any) => {
-    const res = await api.enregistrerSortie(payload);
-    await loadAllData();
-    return res;
-  };
-
   const handleEnregistrerPaiement = async (payload: {
     id_stationnement: string;
     montant: number;
@@ -198,13 +192,23 @@ export function App() {
     (s) => s.statut === 'Présent' && s.client_type === 'Kospam'
   ).length;
 
+  const vehiculesNuitCount = stationnements.filter(
+    (s) => s.statut === 'Présent' && s.reste_la_nuit === true
+  ).length;
+
   const navSections = [
     {
       id: 'guichet' as MainSection,
       label: 'Guichet Parking',
       icon: Car,
       badge: presentsCount,
-      desc: 'Entrées, sorties & véhicules au parking',
+      desc: 'Enregistrements & véhicules au parking',
+    },
+    {
+      id: 'tresorerie' as MainSection,
+      label: 'Trésorerie',
+      icon: Wallet,
+      desc: 'Solde initial, anciennes recettes & dépenses',
     },
     {
       id: 'caisse' as MainSection,
@@ -245,7 +249,8 @@ export function App() {
                 {parametres.nom_parking}
               </span>
               <span className="text-[10px] font-bold text-emerald-600 block uppercase tracking-wider">
-                {placesLibresCount} places libres • {presentsCount} garés
+                Capacité Illimitée • {presentsCount} Garé{presentsCount > 1 ? 's' : ''}
+                {vehiculesNuitCount > 0 ? ` (${vehiculesNuitCount} nuit)` : ''}
               </span>
             </div>
           </div>
@@ -261,13 +266,13 @@ export function App() {
 
           {/* Live Portefeuille Solde Pill */}
           <div
-            onClick={() => setActiveSection('caisse')}
+            onClick={() => setActiveSection('tresorerie')}
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl cursor-pointer transition-colors"
-            title="Cliquer pour voir la caisse"
+            title="Cliquer pour gérer la trésorerie"
           >
             <Wallet className="w-4 h-4 text-emerald-600" />
             <div className="text-xs">
-              <span className="text-slate-400 font-medium mr-1">Caisse:</span>
+              <span className="text-slate-400 font-medium mr-1">Trésorerie:</span>
               <span className="font-black text-slate-900">
                 {formatAriary(portefeuille.solde)}
               </span>
@@ -297,17 +302,15 @@ export function App() {
             <span className="hidden md:inline">+ Entrée Véhicule</span>
           </button>
 
-          {/* GROS BOUTON 2 : SORTIE VÉHICULE */}
+          {/* BOUTON 2 : + RÉTROACTIF (ANCIEN VÉHICULE) */}
           <button
-            id="btn-topbar-sortie-vehicule"
-            onClick={() => {
-              setSortiePreselectSt(null);
-              setIsSortieModalOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
+            id="btn-topbar-ancien-vehicule"
+            onClick={() => setIsAncienModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
+            title="Enregistrer un véhicule antérieur ou historique"
           >
-            <ArrowUpRight className="w-4 h-4" />
-            <span className="hidden md:inline">Sortie Véhicule</span>
+            <History className="w-4 h-4 text-indigo-400" />
+            <span className="hidden md:inline">+ Rétroactif</span>
           </button>
         </div>
       </header>
@@ -387,17 +390,22 @@ export function App() {
                   setKospamPreselect(false);
                   setIsEntreeModalOpen(true);
                 }}
-                onOpenSortieModal={(st) => {
-                  setSortiePreselectSt(st || null);
-                  setIsSortieModalOpen(true);
-                }}
                 onOpenPaiementModal={(st) => setPaiementModalSt(st)}
+                onOpenAncienModal={() => setIsAncienModalOpen(true)}
                 onShowTicket={(st) => setTicketModalData({ stationnement: st })}
                 onRefresh={loadAllData}
               />
             )}
 
-            {/* ONGLET 2 : CAISSE & RÈGLEMENTS */}
+            {/* ONGLET 2 : TRÉSORERIE GLOBALE */}
+            {activeSection === 'tresorerie' && (
+              <TresorerieManager
+                parametres={parametres}
+                onRefresh={loadAllData}
+              />
+            )}
+
+            {/* ONGLET 3 : CAISSE & RÈGLEMENTS */}
             {activeSection === 'caisse' && (
               <PaiementsManager
                 paiements={paiements}
@@ -416,7 +424,7 @@ export function App() {
               />
             )}
 
-            {/* ONGLET 3 : GARAGE KOSPAM */}
+            {/* ONGLET 4 : GARAGE KOSPAM */}
             {activeSection === 'kospam' && (
               <GarageKospam
                 stats={kospamStats}
@@ -427,15 +435,11 @@ export function App() {
                   setIsEntreeModalOpen(true);
                 }}
                 onOpenPaiement={(st) => setPaiementModalSt(st)}
-                onOpenSortie={(st) => {
-                  setSortiePreselectSt(st || null);
-                  setIsSortieModalOpen(true);
-                }}
                 onShowTicket={(st) => setTicketModalData({ stationnement: st })}
               />
             )}
 
-            {/* ONGLET 4 : PARAMÈTRES & TARIFS */}
+            {/* ONGLET 5 : PARAMÈTRES & TARIFS */}
             {activeSection === 'parametres' && (
               <ParametresTarifs
                 parametres={parametres}
@@ -468,19 +472,15 @@ export function App() {
         />
       )}
 
-      {/* Sortie Rapide Modal */}
-      {isSortieModalOpen && (
-        <SortieRapideModal
-          isOpen={isSortieModalOpen}
-          stationnementPreselect={sortiePreselectSt}
-          stationnementsPresents={stationnements.filter((s) => s.statut === 'Présent')}
+      {/* Ancien Véhicule (Historique / Rétroactif) Modal */}
+      {isAncienModalOpen && (
+        <AncienVehiculeModal
+          isOpen={isAncienModalOpen}
           parametres={parametres}
-          onClose={() => {
-            setIsSortieModalOpen(false);
-            setSortiePreselectSt(null);
-          }}
-          onEnregistrerSortie={handleEnregistrerSortie}
-          onSuccess={(st) => {
+          onClose={() => setIsAncienModalOpen(false)}
+          onEnregistrerEntree={handleEnregistrerEntree}
+          onSuccess={async (st) => {
+            await loadAllData();
             setTicketModalData({ stationnement: st });
           }}
         />

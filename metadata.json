@@ -1,6 +1,6 @@
 {
   "name": "Gestion de Parking Privé",
-  "description": "Application complète de gestion de parking privé avec tarification automatique, gestion Garage Kospam, portefeuille financier, suivi des entrées/sorties, places, paiements, impayés, reçus imprimables et rapports.",
+  "description": "Application simple et moderne de gestion de parking privé : enregistrement rapide des stationnements, calcul automatique des tarifs (journée 3 000 Ar, nuit 8 000 Ar, nuit sécurisé 10 000 Ar), gestion de la trésorerie et tableau de bord en temps réel.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

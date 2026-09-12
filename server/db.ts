@@ -13,9 +13,16 @@ import {
   KospamStats,
   TestResult,
   CategorieVehicule,
+  TypeStationnement,
+  TypeClient,
+  ModePaiement,
+  StatutPaiement,
+  StatutStationnement,
+  TypeMouvement,
 } from '../src/types';
 import {
   calculerMontant,
+  calculerTarifStationnement,
   calculerStatutPaiement,
   TARIFS_PAR_DEFAUT,
 } from '../src/services/pricingEngine';
@@ -825,38 +832,61 @@ class DatabaseManager {
       : undefined;
 
     // Calculate total payments made for this stationnement
-    const totalPaye = this.data.paiements
-      .filter((p) => p.id_stationnement === s.id_stationnement)
-      .reduce((sum, p) => sum + Number(p.montant || 0), 0);
+    const payments = this.data.paiements.filter((p) => p.id_stationnement === s.id_stationnement);
+    const totalPaye = payments.reduce((sum, p) => sum + Number(p.montant || 0), 0);
+    const lastPayment = payments[payments.length - 1];
 
     const { montant_du, montant_paye, reste_a_payer, statut_paiement } =
       calculerStatutPaiement(s.montant_du, totalPaye);
 
+    const typeSt: TypeStationnement =
+      s.type_stationnement ||
+      (s.reste_la_nuit ? 'Nuit' : 'Journée normale');
+
+    const modeP: ModePaiement =
+      s.mode_paiement || lastPayment?.mode_paiement || 'Espèces';
+
     return {
       ...s,
+      date: s.date_entree,
+      type_stationnement: typeSt,
       montant_du,
+      montant_a_payer: montant_du,
       montant_paye,
       reste_a_payer,
       statut_paiement,
+      mode_paiement: modeP,
       immatriculation: vehicule?.immatriculation || 'Non renseigné',
       marque: vehicule?.marque || '',
       modele: vehicule?.modele || '',
       categorie: vehicule?.categorie || 'Véhicule léger',
+      categorie_vehicule: vehicule?.categorie || 'Véhicule léger',
       id_client: client?.id_client,
       client_nom: client?.nom || 'Client inconnu',
+      nom_client: client?.nom || 'Client inconnu',
       client_type: client?.type_client || 'Normal',
+      categorie_client: client?.type_client || 'Normal',
       numero_place: place?.numero_place,
     };
   }
 
   /**
-   * ENTRÉE D'UN VÉHICULE
+   * ENTRÉE D'UN VÉHICULE / ENREGISTREMENT D'UN STATIONNEMENT
    */
   public enregistrerEntree(data: {
+    nom_client?: string;
+    categorie_client?: TypeClient;
+    immatriculation?: string;
+    categorie_vehicule?: CategorieVehicule;
+    marque?: string;
+    modele?: string;
+    type_stationnement?: TypeStationnement;
+    date?: string;
+    montant_a_payer?: number;
     id_client?: string;
     client_data?: {
       nom: string;
-      type_client: 'Normal' | 'Kospam';
+      type_client: TypeClient;
       telephone?: string;
       adresse?: string;
       email?: string;
@@ -869,6 +899,22 @@ class DatabaseManager {
       categorie: CategorieVehicule;
     };
     reparation: boolean;
+    reste_la_nuit?: boolean;
+    historique_ancien?: boolean;
+    statut?: StatutStationnement;
+    date_sortie?: string | null;
+    heure_sortie?: string | null;
+    montant_du?: number;
+    montant_paye?: number;
+    regler_maintenant?: boolean;
+    mode_paiement?: ModePaiement;
+    paiement?: {
+      montant: number;
+      mode_paiement: ModePaiement;
+      reference?: string;
+      observation?: string;
+    };
+    comptabiliser_tresorerie?: boolean;
     id_place?: string;
     observation?: string;
     date_entree?: string;
@@ -876,7 +922,31 @@ class DatabaseManager {
   }): Stationnement {
     // 1. Resolve or create client
     let finalClientId = data.id_client;
-    if (!finalClientId && data.client_data) {
+    const resolvedNomClient = data.nom_client?.trim() || data.client_data?.nom?.trim();
+    const resolvedTypeClient = data.categorie_client || data.client_data?.type_client || 'Normal';
+
+    if (!finalClientId && resolvedNomClient) {
+      // Find existing client with same name or create
+      const existingClient = this.data.clients.find(
+        (c) => c.nom.toLowerCase() === resolvedNomClient.toLowerCase()
+      );
+      if (existingClient) {
+        finalClientId = existingClient.id_client;
+        if (resolvedTypeClient && existingClient.type_client !== resolvedTypeClient) {
+          existingClient.type_client = resolvedTypeClient;
+        }
+      } else {
+        const createdClient = this.createClient({
+          nom: resolvedNomClient,
+          type_client: resolvedTypeClient,
+          telephone: data.client_data?.telephone || '',
+          adresse: data.client_data?.adresse || '',
+          email: data.client_data?.email || '',
+          observation: '',
+        });
+        finalClientId = createdClient.id_client;
+      }
+    } else if (!finalClientId && data.client_data) {
       const createdClient = this.createClient({
         nom: data.client_data.nom,
         type_client: data.client_data.type_client,
@@ -887,23 +957,46 @@ class DatabaseManager {
       });
       finalClientId = createdClient.id_client;
     }
+
     if (!finalClientId) {
-      throw new Error('Un client valide est obligatoire.');
+      // Default fallback client if none provided
+      const defaultCli = this.data.clients[0] || this.createClient({ nom: 'Client Standard', type_client: 'Normal', telephone: '', adresse: '', email: '' });
+      finalClientId = defaultCli.id_client;
     }
-    const client = this.getClientById(finalClientId);
-    if (!client) throw new Error('Client introuvable.');
+    const client = this.getClientById(finalClientId)!;
 
     // 2. Resolve or create vehicule
     let finalVehiculeId = data.id_vehicule;
-    if (!finalVehiculeId && data.vehicule_data) {
+    const resolvedImmat = (data.immatriculation || data.vehicule_data?.immatriculation || '').trim().toUpperCase();
+    const resolvedCategorie = data.categorie_vehicule || data.vehicule_data?.categorie || 'Véhicule léger';
+    const resolvedMarque = data.marque || data.vehicule_data?.marque || '';
+    const resolvedModele = data.modele || data.vehicule_data?.modele || '';
+
+    if (!finalVehiculeId && resolvedImmat) {
+      const existing = this.getVehiculeByImmatriculation(resolvedImmat);
+      if (existing) {
+        finalVehiculeId = existing.id_vehicule;
+        if (existing.id_client !== finalClientId) {
+          this.updateVehicule(existing.id_vehicule, { id_client: finalClientId });
+        }
+        if (resolvedCategorie && existing.categorie !== resolvedCategorie) {
+          existing.categorie = resolvedCategorie;
+        }
+      } else {
+        const createdVeh = this.createVehicule({
+          immatriculation: resolvedImmat,
+          marque: resolvedMarque || 'Véhicule',
+          modele: resolvedModele,
+          categorie: resolvedCategorie,
+          id_client: finalClientId,
+        });
+        finalVehiculeId = createdVeh.id_vehicule;
+      }
+    } else if (!finalVehiculeId && data.vehicule_data) {
       const cleanImmat = data.vehicule_data.immatriculation.trim().toUpperCase();
       const existing = this.getVehiculeByImmatriculation(cleanImmat);
       if (existing) {
         finalVehiculeId = existing.id_vehicule;
-        // update client if changed
-        if (existing.id_client !== finalClientId) {
-          this.updateVehicule(existing.id_vehicule, { id_client: finalClientId });
-        }
       } else {
         const createdVeh = this.createVehicule({
           immatriculation: cleanImmat,
@@ -915,82 +1008,263 @@ class DatabaseManager {
         finalVehiculeId = createdVeh.id_vehicule;
       }
     }
+
     if (!finalVehiculeId) {
-      throw new Error('Un véhicule valide est obligatoire.');
+      throw new Error("L'immatriculation du véhicule est obligatoire.");
     }
-    const vehicule = this.getVehiculeById(finalVehiculeId);
-    if (!vehicule) throw new Error('Véhicule introuvable.');
+    const vehicule = this.getVehiculeById(finalVehiculeId)!;
 
-    // 3. Validation: Prevent two active entries for the same vehicle
-    const alreadyPresent = this.data.stationnements.find(
-      (s) => s.id_vehicule === finalVehiculeId && s.statut === 'Présent'
-    );
-    if (alreadyPresent) {
-      throw new Error(
-        `Le véhicule ${vehicule.immatriculation} est déjà enregistré comme présent dans le parking (Stationnement #${alreadyPresent.id_stationnement}).`
-      );
+    const isStatutSorti = data.statut === 'Sorti' || (data.historique_ancien && Boolean(data.date_sortie));
+
+    // 3. Type de stationnement & tarification automatique
+    const resolvedTypeSt: TypeStationnement =
+      data.type_stationnement ||
+      (data.reste_la_nuit ? 'Nuit' : 'Journée normale');
+
+    let montant_du: number;
+    if (data.montant_a_payer !== undefined && data.montant_a_payer >= 0) {
+      montant_du = Number(data.montant_a_payer);
+    } else if (data.montant_du !== undefined && data.montant_du >= 0) {
+      montant_du = Number(data.montant_du);
+    } else {
+      montant_du = calculerTarifStationnement(resolvedTypeSt, this.data.parametres.tarifs);
     }
-
-    // 4. Validate and occupy place if provided
-    let finalPlaceId = data.id_place || null;
-    if (finalPlaceId) {
-      const place = this.data.places.find((p) => p.id_place === finalPlaceId);
-      if (!place) throw new Error('Place sélectionnée introuvable.');
-      if (place.statut === 'Occupée') {
-        throw new Error(`La place ${place.numero_place} est déjà occupée.`);
-      }
-    }
-
-    // 5. Automatic Pricing Calculation via Centralized Engine
-    const montant_du = calculerMontant(
-      client.type_client,
-      vehicule.categorie,
-      Boolean(data.reparation),
-      this.data.parametres.tarifs
-    );
 
     const now = new Date();
     const dateEntree =
+      data.date ||
       data.date_entree ||
       `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const heureEntree =
       data.heure_entree ||
       `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+    const dateSortie = isStatutSorti ? data.date_sortie || dateEntree : null;
+    const heureSortie = isStatutSorti ? data.heure_sortie || heureEntree : null;
+
     const nextStNum = this.data.stationnements.length + 1;
     const id_stationnement = `ST-${String(nextStNum).padStart(4, '0')}`;
+
+    const isNuit = resolvedTypeSt === 'Nuit' || resolvedTypeSt === 'Nuit – Parking sécurisé' || Boolean(data.reste_la_nuit);
 
     const newStationnement: Stationnement = {
       id_stationnement,
       id_vehicule: finalVehiculeId,
-      id_place: finalPlaceId,
+      id_place: null,
       date_entree: dateEntree,
       heure_entree: heureEntree,
-      date_sortie: null,
-      heure_sortie: null,
+      date_sortie: dateSortie,
+      heure_sortie: heureSortie,
       reparation: Boolean(data.reparation),
+      type_stationnement: resolvedTypeSt,
+      reste_la_nuit: isNuit,
+      historique_ancien: Boolean(data.historique_ancien),
       montant_du,
+      montant_a_payer: montant_du,
       montant_paye: 0,
       reste_a_payer: montant_du,
-      statut: 'Présent',
+      mode_paiement: data.mode_paiement || data.paiement?.mode_paiement || 'Espèces',
+      statut: isStatutSorti ? 'Sorti' : 'Présent',
       statut_paiement: 'Non payé',
       observation: data.observation || '',
     };
 
     this.data.stationnements.push(newStationnement);
+    this.persist();
 
-    // If place assigned, mark as occupied
-    if (finalPlaceId) {
-      const pIndex = this.data.places.findIndex((p) => p.id_place === finalPlaceId);
-      if (pIndex !== -1) {
-        this.data.places[pIndex].statut = 'Occupée';
-        this.data.places[pIndex].id_stationnement_actuel = id_stationnement;
-        this.data.places[pIndex].immatriculation_actuelle = vehicule.immatriculation;
+    // 4. Règlement direct
+    const montantPaye =
+      data.paiement?.montant !== undefined
+        ? Number(data.paiement.montant)
+        : data.montant_paye !== undefined
+        ? Number(data.montant_paye)
+        : data.regler_maintenant
+        ? montant_du
+        : 0;
+
+    if (montantPaye > 0) {
+      const modeP = data.paiement?.mode_paiement || data.mode_paiement || 'Espèces';
+      const ref = data.paiement?.reference || `REC-${id_stationnement}`;
+      const obs = data.paiement?.observation || (data.historique_ancien ? 'Paiement ancien véhicule' : 'Paiement stationnement');
+
+      if (data.comptabiliser_tresorerie !== false) {
+        this.enregistrerPaiement({
+          id_stationnement,
+          montant: montantPaye,
+          mode_paiement: modeP,
+          reference: ref,
+          observation: obs,
+        });
+      } else {
+        const nextPayNum = this.data.paiements.length + 1;
+        const id_paiement = `PAY-${String(nextPayNum).padStart(4, '0')}`;
+        this.data.paiements.push({
+          id_paiement,
+          id_stationnement,
+          date_paiement: `${dateEntree} ${heureEntree}:00`,
+          montant: montantPaye,
+          mode_paiement: modeP,
+          reference: ref,
+          observation: `${obs} (Déjà inclus dans solde initial)`,
+        });
+        this.persist();
       }
     }
 
-    this.persist();
     return this.enrichStationnement(newStationnement);
+  }
+
+  /**
+   * MODIFIER UN STATIONNEMENT
+   */
+  public updateStationnement(
+    id: string,
+    data: {
+      nom_client?: string;
+      categorie_client?: TypeClient;
+      immatriculation?: string;
+      categorie_vehicule?: CategorieVehicule;
+      reparation?: boolean;
+      type_stationnement?: TypeStationnement;
+      date?: string;
+      date_entree?: string;
+      montant_a_payer?: number;
+      montant_du?: number;
+      montant_paye?: number;
+      mode_paiement?: ModePaiement;
+      observation?: string;
+      statut?: StatutStationnement;
+      statut_paiement?: StatutPaiement;
+      reste_la_nuit?: boolean;
+    }
+  ): Stationnement {
+    const stIndex = this.data.stationnements.findIndex((s) => s.id_stationnement === id);
+    if (stIndex === -1) throw new Error('Stationnement introuvable.');
+
+    const currentSt = this.data.stationnements[stIndex];
+
+    // Update client / vehicule
+    const vehicule = this.getVehiculeById(currentSt.id_vehicule);
+    if (vehicule) {
+      if (data.nom_client || data.categorie_client) {
+        const client = this.getClientById(vehicule.id_client);
+        if (client) {
+          if (data.nom_client) client.nom = data.nom_client.trim();
+          if (data.categorie_client) client.type_client = data.categorie_client;
+        }
+      }
+      if (data.immatriculation) {
+        vehicule.immatriculation = data.immatriculation.trim().toUpperCase();
+      }
+      if (data.categorie_vehicule) {
+        vehicule.categorie = data.categorie_vehicule;
+      }
+    }
+
+    if (data.date_entree || data.date) {
+      currentSt.date_entree = (data.date_entree || data.date)!;
+    }
+    if (data.reparation !== undefined) {
+      currentSt.reparation = Boolean(data.reparation);
+    }
+    if (data.type_stationnement) {
+      currentSt.type_stationnement = data.type_stationnement;
+      currentSt.reste_la_nuit =
+        data.type_stationnement === 'Nuit' || data.type_stationnement === 'Nuit – Parking sécurisé';
+    }
+    if (data.reste_la_nuit !== undefined) {
+      currentSt.reste_la_nuit = Boolean(data.reste_la_nuit);
+    }
+    if (data.observation !== undefined) {
+      currentSt.observation = data.observation;
+    }
+    if (data.statut) {
+      currentSt.statut = data.statut;
+    }
+
+    let nouveauMontantDu = currentSt.montant_du;
+    if (data.montant_a_payer !== undefined) {
+      nouveauMontantDu = Math.max(0, Number(data.montant_a_payer) || 0);
+    } else if (data.montant_du !== undefined) {
+      nouveauMontantDu = Math.max(0, Number(data.montant_du) || 0);
+    }
+    currentSt.montant_du = nouveauMontantDu;
+    currentSt.montant_a_payer = nouveauMontantDu;
+
+    if (data.mode_paiement) {
+      currentSt.mode_paiement = data.mode_paiement;
+    }
+
+    // Update payment and sync with trésorerie
+    if (data.montant_paye !== undefined) {
+      const nouveauMontantPaye = Math.max(0, Number(data.montant_paye) || 0);
+      const modeP = data.mode_paiement || currentSt.mode_paiement || 'Espèces';
+
+      const existingPayIndex = this.data.paiements.findIndex((p) => p.id_stationnement === id);
+
+      if (nouveauMontantPaye > 0) {
+        if (existingPayIndex !== -1) {
+          const p = this.data.paiements[existingPayIndex];
+          p.montant = nouveauMontantPaye;
+          p.mode_paiement = modeP;
+
+          const mIndex = this.data.portefeuille.findIndex((m) => m.id_paiement === p.id_paiement);
+          if (mIndex !== -1) {
+            this.data.portefeuille[mIndex].entree = nouveauMontantPaye;
+            this.data.portefeuille[mIndex].motif = `Stationnement #${id} (${vehicule?.immatriculation || ''} - ${data.nom_client || ''})`;
+          } else {
+            this.ajouterMouvementPortefeuille({
+              type_mouvement: 'Encaissement parking',
+              reference: `REC-${id}`,
+              entree: nouveauMontantPaye,
+              sortie: 0,
+              motif: `Stationnement #${id} (${vehicule?.immatriculation || ''})`,
+              id_paiement: p.id_paiement,
+            });
+          }
+        } else {
+          this.enregistrerPaiement({
+            id_stationnement: id,
+            montant: nouveauMontantPaye,
+            mode_paiement: modeP,
+            reference: `REC-${id}`,
+            observation: `Paiement stationnement #${id}`,
+          });
+        }
+      } else {
+        if (existingPayIndex !== -1) {
+          const p = this.data.paiements[existingPayIndex];
+          this.data.portefeuille = this.data.portefeuille.filter((m) => m.id_paiement !== p.id_paiement);
+          this.data.paiements.splice(existingPayIndex, 1);
+        }
+      }
+    }
+
+    this.recalculerSoldesPortefeuille();
+    this.persist();
+    return this.enrichStationnement(this.data.stationnements[stIndex]);
+  }
+
+  /**
+   * SUPPRIMER UN STATIONNEMENT
+   */
+  public deleteStationnement(id: string): boolean {
+    const stIndex = this.data.stationnements.findIndex((s) => s.id_stationnement === id);
+    if (stIndex === -1) throw new Error('Stationnement introuvable.');
+
+    const paymentsToDelete = this.data.paiements.filter((p) => p.id_stationnement === id);
+    const paymentIds = new Set(paymentsToDelete.map((p) => p.id_paiement));
+
+    this.data.portefeuille = this.data.portefeuille.filter(
+      (m) => !(m.id_paiement && paymentIds.has(m.id_paiement)) && !m.reference?.includes(id)
+    );
+
+    this.data.paiements = this.data.paiements.filter((p) => p.id_stationnement !== id);
+    this.data.stationnements.splice(stIndex, 1);
+
+    this.recalculerSoldesPortefeuille();
+    this.persist();
+    return true;
   }
 
   /**
@@ -1197,6 +1471,219 @@ class DatabaseManager {
     return newMvt;
   }
 
+  public recalculerSoldesPortefeuille() {
+    let solde = 0;
+    this.data.portefeuille = this.data.portefeuille.map((m) => {
+      solde += Number(m.entree || 0) - Number(m.sortie || 0);
+      return {
+        ...m,
+        solde,
+      };
+    });
+    this.persist();
+  }
+
+  public setSoldeInitial(montant: number, date?: string, observation?: string): MouvementPortefeuille {
+    const val = Math.max(0, Number(montant) || 0);
+    this.data.parametres.solde_initial = val;
+    this.data.parametres.date_solde_initial = date || new Date().toISOString().split('T')[0];
+
+    const idx = this.data.portefeuille.findIndex((m) => m.type_mouvement === 'Solde initial');
+    const dateStr = date
+      ? (date.length === 10 ? `${date} 00:00:00` : date)
+      : `${new Date().toISOString().split('T')[0]} 00:00:00`;
+
+    if (idx !== -1) {
+      this.data.portefeuille[idx].entree = val;
+      this.data.portefeuille[idx].date = dateStr;
+      this.data.portefeuille[idx].observation = observation || 'Solde initial disponible avant utilisation de l\'application';
+    } else {
+      const initMvt: MouvementPortefeuille = {
+        id_mouvement: 'MVT-INIT',
+        date: dateStr,
+        type_mouvement: 'Solde initial',
+        reference: 'SOLDE-INITIAL',
+        entree: val,
+        sortie: 0,
+        solde: val,
+        motif: 'Solde initial de trésorerie disponible au démarrage',
+        observation: observation || 'Argent disponible avant utilisation de l\'application',
+        categorie: 'Solde de départ',
+      };
+      this.data.portefeuille.unshift(initMvt);
+    }
+
+    this.recalculerSoldesPortefeuille();
+    return this.data.portefeuille.find((m) => m.type_mouvement === 'Solde initial')!;
+  }
+
+  public ajouterMouvementTresorerie(data: {
+    type_mouvement:
+      | 'Solde initial'
+      | 'Encaissement parking'
+      | 'Ancienne recette'
+      | 'Ancienne dépense'
+      | 'Dépense'
+      | 'Autre entrée'
+      | 'Autre sortie';
+    montant: number;
+    date?: string;
+    motif: string;
+    categorie?: string;
+    observation?: string;
+    reference?: string;
+  }): MouvementPortefeuille {
+    const montant = Math.max(0, Number(data.montant) || 0);
+    if (montant <= 0) {
+      throw new Error('Le montant du mouvement doit être strictement supérieur à 0.');
+    }
+    if (!data.motif?.trim()) {
+      throw new Error('Le motif du mouvement est obligatoire.');
+    }
+
+    const isEntree =
+      data.type_mouvement === 'Solde initial' ||
+      data.type_mouvement === 'Encaissement parking' ||
+      data.type_mouvement === 'Ancienne recette' ||
+      data.type_mouvement === 'Autre entrée';
+
+    const entree = isEntree ? montant : 0;
+    const sortie = isEntree ? 0 : montant;
+
+    const now = new Date();
+    const dateStr = data.date
+      ? (data.date.length === 10
+          ? `${data.date} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+          : data.date)
+      : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+    const nextMvtNum = this.data.portefeuille.length + 1;
+    const id_mouvement = `MVT-${String(nextMvtNum).padStart(4, '0')}`;
+
+    const newMvt: MouvementPortefeuille = {
+      id_mouvement,
+      date: dateStr,
+      type_mouvement: data.type_mouvement,
+      reference: data.reference || `REF-${id_mouvement}`,
+      entree,
+      sortie,
+      solde: 0,
+      motif: data.motif.trim(),
+      observation: data.observation || '',
+      categorie: data.categorie || (isEntree ? 'Recette' : 'Dépense'),
+    };
+
+    this.data.portefeuille.push(newMvt);
+    this.recalculerSoldesPortefeuille();
+    return this.data.portefeuille.find((m) => m.id_mouvement === id_mouvement) || newMvt;
+  }
+
+  public updateMouvementTresorerie(
+    id: string,
+    data: {
+      motif?: string;
+      montant?: number;
+      date?: string;
+      observation?: string;
+      categorie?: string;
+      type_mouvement?: TypeMouvement;
+    }
+  ): MouvementPortefeuille {
+    const idx = this.data.portefeuille.findIndex((m) => m.id_mouvement === id);
+    if (idx === -1) throw new Error('Mouvement de trésorerie introuvable.');
+
+    const m = this.data.portefeuille[idx];
+
+    if (data.motif) m.motif = data.motif.trim();
+    if (data.observation !== undefined) m.observation = data.observation;
+    if (data.categorie) m.categorie = data.categorie;
+    if (data.date) {
+      m.date = data.date.length === 10 ? `${data.date} 12:00:00` : data.date;
+    }
+    if (data.type_mouvement) {
+      m.type_mouvement = data.type_mouvement;
+    }
+
+    if (data.montant !== undefined) {
+      const val = Math.max(0, Number(data.montant) || 0);
+      const isEntree =
+        m.type_mouvement === 'Solde initial' ||
+        m.type_mouvement === 'Encaissement parking' ||
+        m.type_mouvement === 'Ancienne recette' ||
+        m.type_mouvement === 'Autre entrée';
+
+      if (isEntree) {
+        m.entree = val;
+        m.sortie = 0;
+      } else {
+        m.sortie = val;
+        m.entree = 0;
+      }
+    }
+
+    this.recalculerSoldesPortefeuille();
+    this.persist();
+    return m;
+  }
+
+  public deleteMouvementTresorerie(id: string): boolean {
+    const idx = this.data.portefeuille.findIndex((m) => m.id_mouvement === id);
+    if (idx === -1) throw new Error('Mouvement de trésorerie introuvable.');
+
+    const m = this.data.portefeuille[idx];
+    if (m.type_mouvement === 'Solde initial') {
+      m.entree = 0;
+      this.data.parametres.solde_initial = 0;
+    } else {
+      this.data.portefeuille.splice(idx, 1);
+    }
+
+    this.recalculerSoldesPortefeuille();
+    this.persist();
+    return true;
+  }
+
+  public getTresorerieResume() {
+    const mouvements = this.getPortefeuille();
+    const soldeInitialParam = this.data.parametres.solde_initial || 0;
+    const initMvt = mouvements.find((m) => m.type_mouvement === 'Solde initial');
+    const soldeInitial = initMvt ? initMvt.entree : soldeInitialParam;
+
+    let recettesParking = 0;
+    let anciennesRecettes = 0;
+    let autresEntrees = 0;
+    let anciennesDepenses = 0;
+    let depensesCourantes = 0;
+    let autresSorties = 0;
+
+    mouvements.forEach((m) => {
+      if (m.type_mouvement === 'Encaissement parking') recettesParking += Number(m.entree || 0);
+      else if (m.type_mouvement === 'Ancienne recette') anciennesRecettes += Number(m.entree || 0);
+      else if (m.type_mouvement === 'Autre entrée') autresEntrees += Number(m.entree || 0);
+      else if (m.type_mouvement === 'Ancienne dépense') anciennesDepenses += Number(m.sortie || 0);
+      else if (m.type_mouvement === 'Dépense') depensesCourantes += Number(m.sortie || 0);
+      else if (m.type_mouvement === 'Autre sortie') autresSorties += Number(m.sortie || 0);
+    });
+
+    const totalEntrees = soldeInitial + recettesParking + anciennesRecettes + autresEntrees;
+    const totalSorties = anciennesDepenses + depensesCourantes + autresSorties;
+    const soldeDisponible = totalEntrees - totalSorties;
+
+    return {
+      solde_initial: soldeInitial,
+      recettes_parking: recettesParking,
+      anciennes_recettes: anciennesRecettes,
+      autres_entrees: autresEntrees,
+      total_recettes_globales: recettesParking + anciennesRecettes + autresEntrees,
+      anciennes_depenses: anciennesDepenses,
+      depenses_courantes: depensesCourantes,
+      autres_sorties: autresSorties,
+      total_depenses_globales: totalSorties,
+      solde_disponible: soldeDisponible,
+      mouvements,
+    };
+  }
+
   public getSoldePortefeuille(): number {
     const totalEntrees = this.data.portefeuille.reduce((sum, m) => sum + (Number(m.entree) || 0), 0);
     const totalSorties = this.data.portefeuille.reduce((sum, m) => sum + (Number(m.sortie) || 0), 0);
@@ -1212,6 +1699,7 @@ class DatabaseManager {
 
     const allSt = this.getStationnements();
     const presents = allSt.filter((s) => s.statut === 'Présent');
+    const vehicules_nuit_presents = presents.filter((s) => s.reste_la_nuit).length;
     const entreesJour = allSt.filter((s) => s.date_entree === todayStr).length;
     const sortiesJour = allSt.filter(
       (s) => s.statut === 'Sorti' && (s.date_sortie === todayStr || (!s.date_sortie && s.date_entree === todayStr))
@@ -1234,8 +1722,9 @@ class DatabaseManager {
     const totalDepense = this.data.portefeuille.reduce((sum, m) => sum + (Number(m.sortie) || 0), 0);
     const soldePortefeuille = totalEncaisse - totalDepense;
 
-    const placesOccupees = this.data.places.filter((p) => p.statut === 'Occupée').length;
-    const placesLibres = this.data.places.filter((p) => p.statut === 'Libre').length;
+    // Gestion des places supprimée (capacité illimitée)
+    const placesOccupees = presents.length;
+    const placesLibres = 999;
 
     // Recettes par jour (derniers 7 jours)
     const recettesParJourMap: { [date: string]: { montant: number; entrees: number } } = {};
@@ -1342,12 +1831,18 @@ class DatabaseManager {
 
     return {
       vehicules_presents: presents.length,
+      vehicules_nuit_presents,
       places_occupees: placesOccupees,
       places_libres: placesLibres,
       entrees_jour: entreesJour,
       sorties_jour: sortiesJour,
       recettes_jour: recettesJour,
+      recettes_totales: totalEncaisse,
       recettes_mois: recettesMois,
+      total_depenses: totalDepense,
+      solde_tresorerie: soldePortefeuille,
+      nombre_stationnements: allSt.length,
+      montant_restant_a_payer: totalAEncaisser,
       total_non_paye: nonPayes,
       total_partiellement_paye: partPayes,
       total_a_encaisser: totalAEncaisser,

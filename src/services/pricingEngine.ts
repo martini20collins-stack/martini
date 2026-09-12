@@ -1,55 +1,90 @@
-import { CategorieVehicule, TarifsConfig, TypeClient } from '../types';
+import { CategorieVehicule, TarifsConfig, TypeClient, TypeStationnement } from '../types';
 
 export const TARIFS_PAR_DEFAUT: TarifsConfig = {
   stationnement_base: 3000,
+  supplement_nuit: 5000,
+  nuit_normale: 8000,
+  nuit_securise: 10000,
   majoration_reparation_normal_leger: 0,
   majoration_reparation_normal_autre: 2000,
   majoration_reparation_kospam: 2000,
 };
 
 /**
- * MOTEUR CENTRAL DE TARIFICATION
- * Règle stricte et unique utilisée partout dans l'application
+ * MOTEUR CENTRAL DE TARIFICATION (Règles officielles de l'application)
  *
- * SI client = Normal :
- *   SI réparation = NON :
- *     montant = 3000
- *   SINON SI catégorie = Véhicule léger :
- *     montant = 3000
- *   SINON :
- *     montant = 5000
+ * 1. Stationnement normal (Journée normale) :
+ *    3 000 Ar
  *
- * SI client = Kospam :
- *   SI réparation = NON :
- *     montant = 3000
- *   SINON :
- *     montant = 5000
+ * 2. Stationnement avec nuit :
+ *    Tarif normal (3 000 Ar) + supplément de nuit (5 000 Ar) = 8 000 Ar
+ *    Donc Nuit → 8 000 Ar
+ *
+ * 3. Nuit dans le parking sécurisé :
+ *    Nuit – Parking sécurisé → 10 000 Ar
  */
-export function calculerMontant(
-  typeClient: TypeClient,
-  categorie: CategorieVehicule,
-  reparation: boolean,
-  tarifs: TarifsConfig = TARIFS_PAR_DEFAUT
+export function calculerTarifStationnement(
+  typeStationnement: TypeStationnement = 'Journée normale',
+  tarifs: Partial<TarifsConfig> = TARIFS_PAR_DEFAUT
 ): number {
   const base = Number(tarifs.stationnement_base) || 3000;
+  const supplementNuit = Number(tarifs.supplement_nuit) || 5000;
+  const nuitNormale = Number(tarifs.nuit_normale) || (base + supplementNuit);
+  const nuitSecurise = Number(tarifs.nuit_securise) || 10000;
 
-  if (typeClient === 'Normal') {
-    if (!reparation) {
+  switch (typeStationnement) {
+    case 'Nuit – Parking sécurisé':
+      return nuitSecurise;
+    case 'Nuit':
+      return nuitNormale;
+    case 'Journée normale':
+    default:
       return base;
-    }
-    if (categorie === 'Véhicule léger') {
-      return base + (Number(tarifs.majoration_reparation_normal_leger) || 0);
-    }
-    // 4x4, Camionnette, Bus, Camion
-    return base + (Number(tarifs.majoration_reparation_normal_autre) || 2000);
+  }
+}
+
+/**
+ * Moteur complet de calcul :
+ * - Stationnement normal : 3 000 Ar
+ * - Nuit : + 5 000 Ar (Total = 8 000 Ar)
+ * - Nuit – Parking sécurisé : 10 000 Ar
+ * - Client Normal :
+ *     Sans réparation : 3 000 Ar
+ *     Avec réparation : Véhicule léger = 3 000 Ar, Autre catégorie = 5 000 Ar
+ * - Garage Kospam :
+ *     Sans réparation : 3 000 Ar
+ *     Avec réparation : 5 000 Ar
+ */
+export function calculerMontant(
+  typeClient: TypeClient = 'Normal',
+  categorie: CategorieVehicule = 'Véhicule léger',
+  reparation: boolean = false,
+  tarifs: Partial<TarifsConfig> = TARIFS_PAR_DEFAUT,
+  typeStationnement: TypeStationnement = 'Journée normale'
+): number {
+  if (typeStationnement === 'Nuit – Parking sécurisé') {
+    return Number(tarifs.nuit_securise) || 10000;
   }
 
-  if (typeClient === 'Kospam') {
-    if (!reparation) {
-      return base;
+  let base = Number(tarifs.stationnement_base) || 3000;
+
+  if (reparation) {
+    if (typeClient === 'Kospam') {
+      base = 5000;
+    } else {
+      if (categorie === 'Véhicule léger') {
+        base = 3000;
+      } else {
+        base = 5000;
+      }
     }
-    // RÈGLE ABSOLUE KOSPAM : toujours le même tarif quelle que soit la catégorie
-    return base + (Number(tarifs.majoration_reparation_kospam) || 2000);
+  } else {
+    base = 3000;
+  }
+
+  if (typeStationnement === 'Nuit') {
+    const suppNuit = Number(tarifs.supplement_nuit) || 5000;
+    return base + suppNuit;
   }
 
   return base;
@@ -57,7 +92,8 @@ export function calculerMontant(
 
 /**
  * Calcul du statut de paiement
- * Reste à payer = Montant dû - Total des paiements
+ * Reste à payer = Montant à payer - Montant payé
+ * Statuts : 'Payé' | 'Partiellement payé' | 'Non payé'
  */
 export function calculerStatutPaiement(
   montantDu: number,

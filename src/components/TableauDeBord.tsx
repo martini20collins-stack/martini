@@ -98,126 +98,110 @@ export const TableauDeBord: React.FC<TableauDeBordProps> = ({
         </div>
       </div>
 
-      {/* Grid of Statistical KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3.5">
-        {/* Véhicules présents */}
-        <div
-          onClick={() => onNavigate('presents')}
-          className="bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 transition-all cursor-pointer shadow-xs"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Présents</span>
-            <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
-              <Car className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1">
-            <span className="text-2xl font-black text-slate-900">{stats.vehicules_presents}</span>
-            <span className="text-xs text-slate-500">véhicules</span>
-          </div>
-          <span className="text-[11px] text-blue-600 font-medium hover:underline mt-1 block">
-            Voir la liste →
-          </span>
-        </div>
-
-        {/* Places Occupées / Libres */}
+      {/* Grille des 6 KPIs Clés de Trésorerie & Opérations */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        {/* 1. Recettes du Jour */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Occupation</span>
-            <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
-              <ParkingSquare className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <div>
-              <span className="text-xl font-bold text-slate-900">{stats.places_occupees}</span>
-              <span className="text-xs text-slate-400">/{parametres.nombre_total_places}</span>
-            </div>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-              {stats.places_libres} libres
-            </span>
-          </div>
-          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
-            <div
-              className="bg-indigo-600 h-full rounded-full transition-all duration-500"
-              style={{ width: `${tauxOccupation}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Mouvements Jour */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Flux Aujourd'hui</span>
-            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
-              <Activity className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 grid grid-cols-2 gap-1 text-center">
-            <div className="bg-emerald-50/70 p-1.5 rounded-lg">
-              <span className="text-[10px] text-emerald-700 block font-semibold">Entrées</span>
-              <span className="text-base font-extrabold text-emerald-800">
-                +{stats.entrees_jour}
-              </span>
-            </div>
-            <div className="bg-indigo-50/70 p-1.5 rounded-lg">
-              <span className="text-[10px] text-indigo-700 block font-semibold">Sorties</span>
-              <span className="text-base font-extrabold text-indigo-800">
-                -{stats.sorties_jour}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Recettes Jour */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Recettes Jour</span>
+            <span className="text-xs font-semibold text-slate-500">Recettes Jour</span>
             <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2">
             <span className="text-lg font-black text-emerald-700 block">
-              {formatAriary(stats.recettes_jour)}
+              {formatAriary(stats.recettes_jour ?? stats.recette_aujourdhui ?? 0)}
             </span>
-            <span className="text-[11px] text-slate-500">Encaissements du jour</span>
+            <span className="text-[11px] text-slate-500">Encaissé aujourd'hui</span>
           </div>
         </div>
 
-        {/* Recettes Mois */}
+        {/* 2. Recettes Totales */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Recettes Mois</span>
+            <span className="text-xs font-semibold text-slate-500">Recettes Totales</span>
             <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2">
             <span className="text-lg font-black text-indigo-700 block">
-              {formatAriary(stats.recettes_mois)}
+              {formatAriary(stats.recettes_totales ?? stats.recettes_mois ?? 0)}
             </span>
-            <span className="text-[11px] text-slate-500">Mois en cours</span>
+            <span className="text-[11px] text-slate-500">Cumul global</span>
           </div>
         </div>
 
-        {/* Solde Portefeuille */}
+        {/* 3. Dépenses */}
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">Total Dépenses</span>
+            <div className="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
+              <ArrowUpRight className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <span className="text-lg font-black text-rose-600 block">
+              {formatAriary(stats.total_depenses ?? 0)}
+            </span>
+            <span className="text-[11px] text-slate-500">Sorties de caisse</span>
+          </div>
+        </div>
+
+        {/* 4. Solde de Trésorerie */}
         <div
-          onClick={() => onNavigate('portefeuille')}
+          onClick={() => onNavigate('tresorerie')}
           className="bg-white p-4 rounded-xl border border-slate-200 hover:border-emerald-300 transition-all cursor-pointer shadow-xs"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Solde Portefeuille</span>
+            <span className="text-xs font-semibold text-slate-500">Solde Trésorerie</span>
             <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
               <Wallet className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2">
             <span className="text-lg font-black text-slate-900 block">
-              {formatAriary(stats.solde_portefeuille)}
+              {formatAriary(stats.solde_tresorerie ?? stats.solde_portefeuille ?? 0)}
             </span>
-            <span className="text-[11px] text-amber-700 font-medium hover:underline">
-              Voir trésorerie →
+            <span className="text-[11px] text-emerald-700 font-medium hover:underline block">
+              Disponible en caisse →
+            </span>
+          </div>
+        </div>
+
+        {/* 5. Nombre de Stationnements */}
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">Stationnements</span>
+            <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+              <Car className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1">
+            <span className="text-2xl font-black text-slate-900">
+              {stats.nombre_stationnements ?? stats.vehicules_presents ?? 0}
+            </span>
+            <span className="text-xs text-slate-500">enregistrés</span>
+          </div>
+          <span className="text-[11px] text-blue-600 font-medium block mt-0.5">
+            {stats.vehicules_presents} actuellement garés
+          </span>
+        </div>
+
+        {/* 6. Montant restant à payer (Impayés) */}
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">Reste à Payer</span>
+            <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <span className={`text-lg font-black block ${((stats.montant_restant_a_payer ?? 0) > 0) ? 'text-rose-600' : 'text-emerald-600'}`}>
+              {formatAriary(stats.montant_restant_a_payer ?? 0)}
+            </span>
+            <span className="text-[11px] text-slate-500">
+              {((stats.montant_restant_a_payer ?? 0) > 0) ? 'Créances à encaisser' : 'Aucun impayé'}
             </span>
           </div>
         </div>

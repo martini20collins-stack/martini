@@ -271,8 +271,15 @@ export const SortieVehicule: React.FC<SortieVehiculeProps> = ({
               </div>
             </div>
 
-            {/* Financial Status */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-white p-4 rounded-xl border border-slate-200">
+            {/* Financial Status & Type de stationnement */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-white p-4 rounded-xl border border-slate-200">
+              <div>
+                <span className="text-[11px] font-medium text-slate-500 block">Type</span>
+                <span className="inline-block mt-0.5 text-xs font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">
+                  {selectedSt.type_stationnement || (selectedSt.reste_la_nuit ? 'Nuit' : 'Journée normale')}
+                </span>
+              </div>
+
               <div>
                 <span className="text-[11px] font-medium text-slate-500 block">Prestation</span>
                 <span
