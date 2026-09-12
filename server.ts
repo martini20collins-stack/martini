@@ -365,17 +365,29 @@ async function startServer() {
   });
 
   // Trésorerie Module APIs
-  app.get('/api/tresorerie/resume', (req: Request, res: Response) => {
+  const soldeInitialPaths = [
+    '/api/tresorerie/solde-initial',
+    '/api/tresorerie/solde_initial',
+    '/api/parametres/solde-initial',
+    '/api/parametres/solde_initial',
+  ];
+
+  app.get(soldeInitialPaths, (req: Request, res: Response) => {
     try {
-      res.json(db.getTresorerieResume());
+      const params = db.getParametres();
+      res.json({
+        success: true,
+        solde_initial: params.solde_initial || 0,
+        date_solde_initial: params.date_solde_initial || new Date().toISOString().split('T')[0],
+      });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
   });
 
-  app.post('/api/tresorerie/solde-initial', (req: Request, res: Response) => {
+  const handleSetSoldeInitial = (req: Request, res: Response) => {
     try {
-      const { montant, date, observation } = req.body;
+      const { montant, date, observation } = req.body || {};
       if (montant === undefined || isNaN(Number(montant))) {
         return res.status(400).json({ error: 'Le montant du solde initial est requis.' });
       }
@@ -383,6 +395,17 @@ async function startServer() {
       res.json({ success: true, mouvement: mvt, solde_initial: Number(montant) });
     } catch (e: any) {
       res.status(400).json({ error: e.message });
+    }
+  };
+
+  app.post(soldeInitialPaths, handleSetSoldeInitial);
+  app.put(soldeInitialPaths, handleSetSoldeInitial);
+
+  app.get(['/api/tresorerie/resume', '/api/tresorerie/resume/'], (req: Request, res: Response) => {
+    try {
+      res.json(db.getTresorerieResume());
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
     }
   });
 

@@ -361,11 +361,11 @@
       "date": "2026-09-12 00:00:00",
       "type_mouvement": "Solde initial",
       "reference": "SOLDE-INITIAL",
-      "entree": 150000,
+      "entree": 2187000,
       "sortie": 0,
-      "solde": 150000,
+      "solde": 2187000,
       "motif": "Solde initial de trésorerie disponible au démarrage",
-      "observation": "Test solde initial",
+      "observation": "Solde initial disponible avant utilisation de l'application",
       "categorie": "Solde de départ"
     },
     {
@@ -377,7 +377,7 @@
       "sortie": 0,
       "motif": "Fond de caisse initial",
       "observation": "Ouverture de caisse gérant",
-      "solde": 200000
+      "solde": 2237000
     },
     {
       "id_mouvement": "MVT-002",
@@ -389,7 +389,7 @@
       "motif": "Paiement stationnement ST-005 (Mercedes Bus)",
       "observation": "Espèces",
       "id_paiement": "PAY-004",
-      "solde": 205000
+      "solde": 2242000
     },
     {
       "id_mouvement": "MVT-003",
@@ -400,7 +400,7 @@
       "sortie": 10000,
       "motif": "Achat rouleaux papier thermique pour tickets",
       "observation": "Fournitures de caisse",
-      "solde": 195000
+      "solde": 2232000
     },
     {
       "id_mouvement": "MVT-004",
@@ -412,7 +412,7 @@
       "motif": "Paiement stationnement ST-004 (Truck Kospam)",
       "observation": "Virement",
       "id_paiement": "PAY-003",
-      "solde": 200000
+      "solde": 2237000
     },
     {
       "id_mouvement": "MVT-005",
@@ -424,7 +424,7 @@
       "motif": "Acompte stationnement ST-001 (Toyota Hilux)",
       "observation": "Espèces",
       "id_paiement": "PAY-001",
-      "solde": 202000
+      "solde": 2239000
     },
     {
       "id_mouvement": "MVT-006",
@@ -436,7 +436,7 @@
       "motif": "Paiement stationnement ST-002 (Renault Master Kospam)",
       "observation": "Mobile Money",
       "id_paiement": "PAY-002",
-      "solde": 207000
+      "solde": 2244000
     },
     {
       "id_mouvement": "MVT-0008",
@@ -445,7 +445,7 @@
       "reference": "REF-MVT-0008",
       "entree": 50000,
       "sortie": 0,
-      "solde": 257000,
+      "solde": 2294000,
       "motif": "Recette parking hier",
       "observation": "",
       "categorie": "Recette"
@@ -463,7 +463,7 @@
       "majoration_reparation_kospam": 2000
     },
     "nombre_total_places": 20,
-    "solde_initial": 150000,
+    "solde_initial": 2187000,
     "date_solde_initial": "2026-09-12"
   }
 }

@@ -641,11 +641,8 @@ export const api = {
     try {
       const res = await request<any>('/api/tresorerie/resume');
       return res;
-    } catch (err: any) {
-      if (err.message === 'NETWORK_OFFLINE') {
-        return offlineStorage.getTresorerieResume();
-      }
-      throw err;
+    } catch {
+      return offlineStorage.getTresorerieResume();
     }
   },
 
@@ -658,12 +655,10 @@ export const api = {
       offlineStorage.setSoldeInitial(payload.montant, payload.date, payload.observation);
       return res;
     } catch (err: any) {
-      if (err.message === 'NETWORK_OFFLINE') {
-        offlineStorage.addToSyncQueue('/api/tresorerie/solde-initial', 'POST', payload);
-        const mvt = offlineStorage.setSoldeInitial(payload.montant, payload.date, payload.observation);
-        return { success: true, mouvement: mvt, solde_initial: payload.montant };
-      }
-      throw err;
+      // Even if network or server error (e.g. 404/500/offline), reliably save locally & queue
+      offlineStorage.addToSyncQueue('/api/tresorerie/solde-initial', 'POST', payload);
+      const mvt = offlineStorage.setSoldeInitial(payload.montant, payload.date, payload.observation);
+      return { success: true, mouvement: mvt, solde_initial: payload.montant };
     }
   },
 
@@ -681,13 +676,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(payload),
       });
+      offlineStorage.ajouterMouvementTresorerie(payload);
       return res;
     } catch (err: any) {
-      if (err.message === 'NETWORK_OFFLINE') {
-        offlineStorage.addToSyncQueue('/api/tresorerie/mouvements', 'POST', payload);
-        return offlineStorage.ajouterMouvementTresorerie(payload);
-      }
-      throw err;
+      offlineStorage.addToSyncQueue('/api/tresorerie/mouvements', 'POST', payload);
+      return offlineStorage.ajouterMouvementTresorerie(payload);
     }
   },
 
@@ -697,13 +690,11 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(updates),
       });
+      offlineStorage.updateMouvementTresorerie(id, updates);
       return res;
     } catch (err: any) {
-      if (err.message === 'NETWORK_OFFLINE') {
-        offlineStorage.addToSyncQueue(`/api/tresorerie/mouvements/${id}`, 'PUT', updates);
-        return offlineStorage.updateMouvementTresorerie(id, updates);
-      }
-      throw err;
+      offlineStorage.addToSyncQueue(`/api/tresorerie/mouvements/${id}`, 'PUT', updates);
+      return offlineStorage.updateMouvementTresorerie(id, updates);
     }
   },
 
@@ -712,14 +703,12 @@ export const api = {
       const res = await request<{ success: boolean }>(`/api/tresorerie/mouvements/${id}`, {
         method: 'DELETE',
       });
+      offlineStorage.deleteMouvementTresorerie(id);
       return res;
     } catch (err: any) {
-      if (err.message === 'NETWORK_OFFLINE') {
-        offlineStorage.addToSyncQueue(`/api/tresorerie/mouvements/${id}`, 'DELETE');
-        const ok = offlineStorage.deleteMouvementTresorerie(id);
-        return { success: ok };
-      }
-      throw err;
+      offlineStorage.addToSyncQueue(`/api/tresorerie/mouvements/${id}`, 'DELETE');
+      const ok = offlineStorage.deleteMouvementTresorerie(id);
+      return { success: ok };
     }
   },
 
