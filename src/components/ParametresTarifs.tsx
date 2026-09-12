@@ -10,19 +10,24 @@ import {
   AlertCircle,
   Plus,
   Minus,
+  ShieldCheck,
 } from 'lucide-react';
 import { ParametresApp } from '../types';
 import { formatAriary } from '../utils/formatters';
+import { SauvegardeManager } from './SauvegardeManager';
 
 interface ParametresTarifsProps {
   parametres: ParametresApp;
   onSaveParametres: (params: ParametresApp) => Promise<ParametresApp>;
+  onDataRestored?: () => void;
 }
 
 export const ParametresTarifs: React.FC<ParametresTarifsProps> = ({
   parametres,
   onSaveParametres,
+  onDataRestored,
 }) => {
+  const [activeTab, setActiveTab] = useState<'tarifs' | 'sauvegardes'>('tarifs');
   const [formData, setFormData] = useState<ParametresApp>({ ...parametres });
   const [loading, setLoading] = useState<boolean>(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -106,33 +111,67 @@ export const ParametresTarifs: React.FC<ParametresTarifsProps> = ({
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="p-3 bg-slate-100 text-slate-800 rounded-xl">
-          <Settings className="w-6 h-6" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-slate-100 text-slate-800 rounded-xl">
+            <Settings className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">Paramètres & Grille Tarifaire</h1>
+            <p className="text-xs text-slate-500">
+              Personnalisation de l'établissement, tickets de caisse et sauvegardes des données
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Paramètres & Grille Tarifaire</h1>
-          <p className="text-xs text-slate-500">
-            Personnalisation de l'établissement, des tickets de caisse et barèmes automatiques
-          </p>
+
+        {/* Sub-tabs */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+          <button
+            type="button"
+            onClick={() => setActiveTab('tarifs')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              activeTab === 'tarifs'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Tarifs & Configuration
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('sauvegardes')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === 'sauvegardes'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>Sauvegardes & Restauration</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          </button>
         </div>
       </div>
 
-      {successMsg && (
-        <div className="flex items-center gap-2 p-4 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-sm">
-          <CheckCircle className="w-5 h-5 shrink-0" />
-          <span>{successMsg}</span>
-        </div>
-      )}
+      {activeTab === 'sauvegardes' ? (
+        <SauvegardeManager onDataRestored={onDataRestored} />
+      ) : (
+        <>
+          {successMsg && (
+            <div className="flex items-center gap-2 p-4 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-sm">
+              <CheckCircle className="w-5 h-5 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
 
-      {errorMsg && (
-        <div className="flex items-center gap-2 p-4 bg-rose-50 text-rose-700 rounded-xl border border-rose-200 text-sm">
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
+          {errorMsg && (
+            <div className="flex items-center gap-2 p-4 bg-rose-50 text-rose-700 rounded-xl border border-rose-200 text-sm">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
         {/* Identité Établissement */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
@@ -407,6 +446,8 @@ export const ParametresTarifs: React.FC<ParametresTarifsProps> = ({
           </button>
         </div>
       </form>
+      </>
+      )}
     </div>
   );
 };

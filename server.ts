@@ -8,7 +8,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
   // --- API ROUTES ---
 
@@ -443,6 +444,62 @@ async function startServer() {
     try {
       db.deleteMouvementTresorerie(req.params.id);
       res.json({ success: true, message: 'Mouvement supprimé avec succès.' });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // --- SAUVEGARDE AUTOMATIQUE & RESTAURATION DES DONNÉES ---
+  app.get(['/api/backup/export', '/api/backup/download'], (req: Request, res: Response) => {
+    try {
+      const data = db.exportFullDatabase();
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="sauvegarde-parking-kospam-${new Date().toISOString().split('T')[0]}.json"`
+      );
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/backup/list', (req: Request, res: Response) => {
+    try {
+      res.json(db.listBackups());
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/backup/create', (req: Request, res: Response) => {
+    try {
+      const { label } = req.body || {};
+      const backup = db.createBackupSnapshot(label || 'Sauvegarde manuelle immédiate', 'manuel');
+      res.status(201).json(backup);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/backup/restore', (req: Request, res: Response) => {
+    try {
+      const result = db.restoreFromPayload(req.body);
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/backup/restore-point', (req: Request, res: Response) => {
+    try {
+      const { id, filename } = req.body || {};
+      const target = id || filename;
+      if (!target) {
+        return res.status(400).json({ error: 'Identifiant du point de sauvegarde requis.' });
+      }
+      const result = db.restoreFromBackup(target);
+      res.json(result);
     } catch (e: any) {
       res.status(400).json({ error: e.message });
     }

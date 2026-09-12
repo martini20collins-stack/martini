@@ -259,3 +259,46 @@ export interface TestResult {
   succes: boolean;
   details?: string;
 }
+
+export interface BackupItem {
+  id: string;
+  filename: string;
+  timestamp: string;
+  date_formatted: string;
+  taille_octets: number;
+  label: string;
+  type: 'automatique' | 'manuel' | 'pre_restauration';
+  counts: {
+    clients: number;
+    vehicules: number;
+    places: number;
+    stationnements: number;
+    paiements: number;
+    mouvements: number;
+    solde_disponible: number;
+  };
+}
+
+export interface BackupExportData {
+  version: string;
+  app: string;
+  exported_at: string;
+  counts: {
+    clients: number;
+    vehicules: number;
+    places: number;
+    stationnements: number;
+    paiements: number;
+    mouvements: number;
+    solde_disponible: number;
+  };
+  data: {
+    clients: Client[];
+    vehicules: Vehicule[];
+    places: Place[];
+    stationnements: Stationnement[];
+    paiements: Paiement[];
+    portefeuille: MouvementPortefeuille[];
+    parametres: ParametresApp;
+  };
+}

@@ -19,6 +19,8 @@ import {
   StatutPaiement,
   StatutStationnement,
   TypeMouvement,
+  BackupItem,
+  BackupExportData,
 } from '../src/types';
 import {
   calculerMontant,
@@ -38,6 +40,7 @@ export interface DatabaseSchema {
 }
 
 const DB_FILE_PATH = path.join(process.cwd(), 'data', 'database.json');
+const BACKUPS_DIR = path.join(process.cwd(), 'data', 'backups');
 
 const DEFAULT_PARAMS: ParametresApp = {
   nom_parking: 'Parking Privé Central',
@@ -395,9 +398,18 @@ function generateInitialSeed(): DatabaseSchema {
 
 class DatabaseManager {
   private data: DatabaseSchema;
+  private lastAutoBackupTime: number = 0;
+  private mutationCounter: number = 0;
 
   constructor() {
     this.data = this.loadDatabase();
+    // Initialize auto backup directory and make initial seed snapshot
+    try {
+      if (!fs.existsSync(BACKUPS_DIR)) {
+        fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+      }
+      this.createBackupSnapshot('Démarrage application', 'automatique');
+    } catch {}
   }
 
   private loadDatabase(): DatabaseSchema {
@@ -441,13 +453,249 @@ class DatabaseManager {
     }
   }
 
-  public persist() {
+  public persist(forceSnapshot = false) {
     this.saveDirect(this.data);
+    this.mutationCounter++;
+
+    // Automatic backup triggered periodically or after 10 changes
+    const now = Date.now();
+    if (forceSnapshot || now - this.lastAutoBackupTime > 5 * 60 * 1000 || this.mutationCounter >= 10) {
+      try {
+        this.createBackupSnapshot('Sauvegarde automatique des mouvements', 'automatique');
+        this.lastAutoBackupTime = now;
+        this.mutationCounter = 0;
+      } catch (e) {
+        console.warn('Auto backup skipped:', e);
+      }
+    }
+  }
+
+  public createBackupSnapshot(
+    label: string = 'Sauvegarde manuelle',
+    type: 'automatique' | 'manuel' | 'pre_restauration' = 'manuel'
+  ): BackupItem {
+    try {
+      if (!fs.existsSync(BACKUPS_DIR)) {
+        fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+      }
+
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+      const filename = `backup_${type}_${timeStr}.json`;
+      const filePath = path.join(BACKUPS_DIR, filename);
+
+      const counts = {
+        clients: this.data.clients?.length || 0,
+        vehicules: this.data.vehicules?.length || 0,
+        places: this.data.places?.length || 0,
+        stationnements: this.data.stationnements?.length || 0,
+        paiements: this.data.paiements?.length || 0,
+        mouvements: this.data.portefeuille?.length || 0,
+        solde_disponible: this.getSoldePortefeuille(),
+      };
+
+      const backupContent: BackupExportData = {
+        version: '2.0',
+        app: 'Garage Kospam - Parking Privé',
+        exported_at: now.toISOString(),
+        counts,
+        data: this.data,
+      };
+
+      fs.writeFileSync(filePath, JSON.stringify(backupContent, null, 2), 'utf-8');
+      const stats = fs.statSync(filePath);
+
+      this.cleanOldBackups();
+
+      return {
+        id: filename,
+        filename,
+        timestamp: now.toISOString(),
+        date_formatted: `${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR')}`,
+        taille_octets: stats.size,
+        label,
+        type,
+        counts,
+      };
+    } catch (e) {
+      console.error('Erreur création snapshot backup:', e);
+      throw new Error('Impossible de générer le fichier de sauvegarde.');
+    }
+  }
+
+  private cleanOldBackups() {
+    try {
+      if (!fs.existsSync(BACKUPS_DIR)) return;
+      const files = fs.readdirSync(BACKUPS_DIR)
+        .filter((f) => f.endsWith('.json'))
+        .map((f) => ({
+          filename: f,
+          path: path.join(BACKUPS_DIR, f),
+          time: fs.statSync(path.join(BACKUPS_DIR, f)).mtimeMs,
+        }))
+        .sort((a, b) => b.time - a.time);
+
+      if (files.length > 30) {
+        for (let i = 30; i < files.length; i++) {
+          try {
+            fs.unlinkSync(files[i].path);
+          } catch {}
+        }
+      }
+    } catch (err) {
+      console.warn('Erreur nettoyage anciens backups:', err);
+    }
+  }
+
+  public listBackups(): BackupItem[] {
+    try {
+      if (!fs.existsSync(BACKUPS_DIR)) return [];
+      const files = fs.readdirSync(BACKUPS_DIR)
+        .filter((f) => f.endsWith('.json'))
+        .map((f) => {
+          const fullPath = path.join(BACKUPS_DIR, f);
+          const stat = fs.statSync(fullPath);
+          let counts = {
+            clients: 0,
+            vehicules: 0,
+            places: 0,
+            stationnements: 0,
+            paiements: 0,
+            mouvements: 0,
+            solde_disponible: 0,
+          };
+          let label = f.includes('auto')
+            ? 'Sauvegarde automatique'
+            : f.includes('pre_restauration')
+            ? 'Point de sécurité avant restauration'
+            : 'Sauvegarde manuelle';
+          let type: 'automatique' | 'manuel' | 'pre_restauration' = f.includes('auto')
+            ? 'automatique'
+            : f.includes('pre_restauration')
+            ? 'pre_restauration'
+            : 'manuel';
+
+          try {
+            const parsed = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
+            if (parsed.counts) counts = parsed.counts;
+            if (parsed.label) label = parsed.label;
+          } catch {}
+
+          const d = new Date(stat.mtime);
+          return {
+            id: f,
+            filename: f,
+            timestamp: d.toISOString(),
+            date_formatted: `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR')}`,
+            taille_octets: stat.size,
+            label,
+            type,
+            counts,
+          };
+        })
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      return files;
+    } catch (e) {
+      console.error('Erreur listBackups:', e);
+      return [];
+    }
+  }
+
+  public exportFullDatabase(): BackupExportData {
+    const counts = {
+      clients: this.data.clients?.length || 0,
+      vehicules: this.data.vehicules?.length || 0,
+      places: this.data.places?.length || 0,
+      stationnements: this.data.stationnements?.length || 0,
+      paiements: this.data.paiements?.length || 0,
+      mouvements: this.data.portefeuille?.length || 0,
+      solde_disponible: this.getSoldePortefeuille(),
+    };
+
+    return {
+      version: '2.0',
+      app: 'Garage Kospam - Parking Privé',
+      exported_at: new Date().toISOString(),
+      counts,
+      data: this.data,
+    };
+  }
+
+  public restoreFromBackup(idOrFilename: string): { success: boolean; counts: any } {
+    const filename = path.basename(idOrFilename);
+    const fullPath = path.join(BACKUPS_DIR, filename);
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(`Fichier de sauvegarde introuvable : ${filename}`);
+    }
+
+    const raw = fs.readFileSync(fullPath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    return this.restoreFromPayload(parsed);
+  }
+
+  public restoreFromPayload(payload: any): { success: boolean; counts: any } {
+    if (!payload) {
+      throw new Error('Données de sauvegarde invalides (fichier vide).');
+    }
+
+    const targetData = payload.data ? payload.data : payload;
+
+    if (
+      !Array.isArray(targetData.clients) ||
+      !Array.isArray(targetData.vehicules) ||
+      !Array.isArray(targetData.stationnements)
+    ) {
+      throw new Error(
+        'Format de sauvegarde non valide. Le fichier doit contenir les tables clients, véhicules et stationnements.'
+      );
+    }
+
+    // 1. Create a safety snapshot before restoring
+    try {
+      this.createBackupSnapshot('Point de sécurité avant restauration', 'pre_restauration');
+    } catch {}
+
+    // 2. Overwrite database
+    this.data = {
+      clients: targetData.clients || [],
+      vehicules: targetData.vehicules || [],
+      places:
+        Array.isArray(targetData.places) && targetData.places.length > 0
+          ? targetData.places
+          : generateInitialSeed().places,
+      stationnements: targetData.stationnements || [],
+      paiements: targetData.paiements || [],
+      portefeuille: targetData.portefeuille || [],
+      parametres: targetData.parametres || DEFAULT_PARAMS,
+    };
+
+    // 3. Recalculate movements balances
+    this.recalculerSoldesPortefeuille();
+
+    // 4. Save to disk directly
+    this.saveDirect(this.data);
+
+    const counts = {
+      clients: this.data.clients.length,
+      vehicules: this.data.vehicules.length,
+      places: this.data.places.length,
+      stationnements: this.data.stationnements.length,
+      paiements: this.data.paiements.length,
+      mouvements: this.data.portefeuille.length,
+      solde_disponible: this.getSoldePortefeuille(),
+    };
+
+    return {
+      success: true,
+      counts,
+    };
   }
 
   public resetToDefault(): DatabaseSchema {
     this.data = generateInitialSeed();
-    this.persist();
+    this.persist(true);
     return this.data;
   }
 

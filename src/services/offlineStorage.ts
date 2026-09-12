@@ -12,6 +12,8 @@ import {
   CategorieVehicule,
   ModePaiement,
   TypeClient,
+  BackupItem,
+  BackupExportData,
 } from '../types';
 
 export interface LocalDatabaseSchema {
@@ -27,6 +29,7 @@ export interface LocalDatabaseSchema {
 
 const STORAGE_KEY = 'PARKING_OFFLINE_DB_V1';
 const QUEUE_KEY = 'PARKING_OFFLINE_SYNC_QUEUE_V1';
+const CLIENT_BACKUPS_KEY = 'PARKING_OFFLINE_BACKUPS_V1';
 
 export const DEFAULT_OFFLINE_PARAMS: ParametresApp = {
   nom_parking: 'Gestion de Parking Privé',
@@ -329,6 +332,9 @@ class OfflineStorageManager {
     return seed;
   }
 
+  private lastAutoBackupTime: number = 0;
+  private mutationCount: number = 0;
+
   private saveDirect(data: LocalDatabaseSchema) {
     if (typeof window === 'undefined') return;
     try {
@@ -343,8 +349,156 @@ class OfflineStorageManager {
     return this.db;
   }
 
-  public save() {
+  public save(forceSnapshot = false) {
     this.saveDirect(this.db);
+    this.mutationCount++;
+
+    const now = Date.now();
+    if (forceSnapshot || now - this.lastAutoBackupTime > 5 * 60 * 1000 || this.mutationCount >= 10) {
+      try {
+        this.createClientBackupSnapshot('Sauvegarde locale automatique', 'automatique');
+        this.lastAutoBackupTime = now;
+        this.mutationCount = 0;
+      } catch (e) {
+        console.warn('Erreur auto backup client:', e);
+      }
+    }
+  }
+
+  public createClientBackupSnapshot(
+    label: string = 'Sauvegarde locale manuelle',
+    type: 'automatique' | 'manuel' | 'pre_restauration' = 'manuel'
+  ): BackupItem {
+    const now = new Date();
+    const id = `backup_local_${type}_${Date.now()}`;
+    const filename = `${id}.json`;
+
+    const counts = {
+      clients: this.db.clients?.length || 0,
+      vehicules: this.db.vehicules?.length || 0,
+      places: this.db.places?.length || 0,
+      stationnements: this.db.stationnements?.length || 0,
+      paiements: this.db.paiements?.length || 0,
+      mouvements: this.db.portefeuille?.length || 0,
+      solde_disponible: this.getSoldePortefeuille(),
+    };
+
+    const item: BackupItem = {
+      id,
+      filename,
+      timestamp: now.toISOString(),
+      date_formatted: `${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR')}`,
+      taille_octets: 0,
+      label,
+      type,
+      counts,
+    };
+
+    if (typeof window !== 'undefined') {
+      try {
+        const fullBackup: BackupExportData = {
+          version: '2.0',
+          app: 'Garage Kospam - Parking Privé',
+          exported_at: now.toISOString(),
+          counts,
+          data: this.db,
+        };
+
+        const jsonStr = JSON.stringify(fullBackup);
+        item.taille_octets = jsonStr.length;
+
+        const storedList = this.listClientBackups();
+        // keep up to 15 client-side backups
+        const updatedList = [item, ...storedList.filter((b) => b.id !== id)].slice(0, 15);
+        localStorage.setItem(CLIENT_BACKUPS_KEY, JSON.stringify(updatedList));
+        localStorage.setItem(`SNAPSHOT_${id}`, jsonStr);
+      } catch (e) {
+        console.warn('Erreur stockage snapshot local:', e);
+      }
+    }
+
+    return item;
+  }
+
+  public listClientBackups(): BackupItem[] {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem(CLIENT_BACKUPS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  }
+
+  public restoreClientBackup(id: string): { success: boolean; counts: any } {
+    if (typeof window === 'undefined') throw new Error('Environnement non supporté');
+    const raw = localStorage.getItem(`SNAPSHOT_${id}`);
+    if (!raw) throw new Error('Sauvegarde locale introuvable');
+    const parsed = JSON.parse(raw);
+    return this.restoreFullDatabase(parsed);
+  }
+
+  public exportFullDatabase(): BackupExportData {
+    const counts = {
+      clients: this.db.clients?.length || 0,
+      vehicules: this.db.vehicules?.length || 0,
+      places: this.db.places?.length || 0,
+      stationnements: this.db.stationnements?.length || 0,
+      paiements: this.db.paiements?.length || 0,
+      mouvements: this.db.portefeuille?.length || 0,
+      solde_disponible: this.getSoldePortefeuille(),
+    };
+
+    return {
+      version: '2.0',
+      app: 'Garage Kospam - Parking Privé',
+      exported_at: new Date().toISOString(),
+      counts,
+      data: this.db,
+    };
+  }
+
+  public restoreFullDatabase(payload: any): { success: boolean; counts: any } {
+    if (!payload) throw new Error('Données de sauvegarde invalides');
+    const targetData = payload.data ? payload.data : payload;
+
+    if (
+      !Array.isArray(targetData.clients) ||
+      !Array.isArray(targetData.vehicules) ||
+      !Array.isArray(targetData.stationnements)
+    ) {
+      throw new Error('Format de sauvegarde invalide');
+    }
+
+    this.createClientBackupSnapshot('Sécurité avant restauration locale', 'pre_restauration');
+
+    this.db = {
+      clients: targetData.clients || [],
+      vehicules: targetData.vehicules || [],
+      places: Array.isArray(targetData.places) && targetData.places.length > 0 ? targetData.places : generateInitialOfflineSeed().places,
+      stationnements: targetData.stationnements || [],
+      paiements: targetData.paiements || [],
+      portefeuille: targetData.portefeuille || [],
+      parametres: targetData.parametres || DEFAULT_OFFLINE_PARAMS,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    this.recalculerSoldesPortefeuille();
+    this.saveDirect(this.db);
+
+    const counts = {
+      clients: this.db.clients.length,
+      vehicules: this.db.vehicules.length,
+      places: this.db.places.length,
+      stationnements: this.db.stationnements.length,
+      paiements: this.db.paiements.length,
+      mouvements: this.db.portefeuille.length,
+      solde_disponible: this.getSoldePortefeuille(),
+    };
+
+    return { success: true, counts };
   }
 
   public syncFromRemote(remoteData: Partial<LocalDatabaseSchema>) {
@@ -463,6 +617,10 @@ class OfflineStorageManager {
       total_encaisse,
       total_depense,
     };
+  }
+
+  public getSoldePortefeuille(): number {
+    return this.getPortefeuille().solde;
   }
 
   public getParametres(): ParametresApp {

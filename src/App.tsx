@@ -14,6 +14,7 @@ import {
   Printer,
   Sparkles,
   History,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   DashboardStats,
@@ -37,6 +38,7 @@ import { TresorerieManager } from './components/TresorerieManager';
 import { PaiementsManager } from './components/PaiementsManager';
 import { GarageKospam } from './components/GarageKospam';
 import { ParametresTarifs } from './components/ParametresTarifs';
+import { SauvegardeManager } from './components/SauvegardeManager';
 
 // Modals
 import { EntreeRapideModal } from './components/EntreeRapideModal';
@@ -48,7 +50,7 @@ import { TicketRecuModal } from './components/TicketRecuModal';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator, OfflineBanner } from './components/OfflineIndicator';
 
-type MainSection = 'guichet' | 'tresorerie' | 'caisse' | 'kospam' | 'parametres';
+type MainSection = 'guichet' | 'tresorerie' | 'caisse' | 'kospam' | 'sauvegardes' | 'parametres';
 
 export function App() {
   const [activeSection, setActiveSection] = useState<MainSection>('guichet');
@@ -225,6 +227,13 @@ export function App() {
       desc: 'Véhicules atelier partenaire',
     },
     {
+      id: 'sauvegardes' as MainSection,
+      label: 'Sauvegardes & Restauration',
+      icon: ShieldCheck,
+      badge: 'Auto',
+      desc: 'Sauvegarde automatique des mouvements et récupération',
+    },
+    {
       id: 'parametres' as MainSection,
       label: 'Paramètres & Tarifs',
       icon: Settings,
@@ -263,6 +272,18 @@ export function App() {
 
           {/* PWA Install Button for Chrome */}
           <PWAInstallButton />
+
+          {/* Quick Auto-Backup Button */}
+          <button
+            id="btn-topbar-sauvegarde"
+            onClick={() => setActiveSection('sauvegardes')}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 text-xs font-bold text-slate-700"
+            title="Sauvegarde automatique active - Cliquez pour gérer ou restaurer vos données"
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="hidden xl:inline">Sauvegardes</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          </button>
 
           {/* Live Portefeuille Solde Pill */}
           <button
@@ -440,7 +461,12 @@ export function App() {
               />
             )}
 
-            {/* ONGLET 5 : PARAMÈTRES & TARIFS */}
+            {/* ONGLET 5 : SAUVEGARDES & RESTAURATION */}
+            {activeSection === 'sauvegardes' && (
+              <SauvegardeManager onDataRestored={loadAllData} />
+            )}
+
+            {/* ONGLET 6 : PARAMÈTRES & TARIFS */}
             {activeSection === 'parametres' && (
               <ParametresTarifs
                 parametres={parametres}

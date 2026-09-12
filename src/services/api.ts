@@ -12,6 +12,8 @@ import {
   TestResult,
   CategorieVehicule,
   ModePaiement,
+  BackupItem,
+  BackupExportData,
 } from '../types';
 import { offlineStorage } from './offlineStorage';
 
@@ -760,6 +762,87 @@ export const api = {
     } catch (err: any) {
       if (err.message === 'NETWORK_OFFLINE') {
         return offlineStorage.getReports(filters);
+      }
+      throw err;
+    }
+  },
+
+  // --- SAUVEGARDE AUTOMATIQUE & RESTAURATION DES DONNÉES ---
+  exportDatabase: async (): Promise<BackupExportData> => {
+    try {
+      return await request<BackupExportData>('/api/backup/export');
+    } catch {
+      return offlineStorage.exportFullDatabase();
+    }
+  },
+
+  listBackups: async (): Promise<BackupItem[]> => {
+    try {
+      const serverBackups = await request<BackupItem[]>('/api/backup/list');
+      const clientBackups = offlineStorage.listClientBackups();
+      // Merge unique backups
+      const seen = new Set<string>();
+      const combined: BackupItem[] = [];
+      [...serverBackups, ...clientBackups].forEach((b) => {
+        if (!seen.has(b.id)) {
+          seen.add(b.id);
+          combined.push(b);
+        }
+      });
+      return combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    } catch {
+      return offlineStorage.listClientBackups();
+    }
+  },
+
+  createBackup: async (label?: string): Promise<BackupItem> => {
+    try {
+      const res = await request<BackupItem>('/api/backup/create', {
+        method: 'POST',
+        body: JSON.stringify({ label: label || 'Sauvegarde manuelle immédiate' }),
+      });
+      // also create client snapshot
+      offlineStorage.createClientBackupSnapshot(label || 'Sauvegarde manuelle immédiate', 'manuel');
+      return res;
+    } catch {
+      return offlineStorage.createClientBackupSnapshot(label || 'Sauvegarde locale manuelle', 'manuel');
+    }
+  },
+
+  restoreBackup: async (payload: any): Promise<{ success: boolean; counts: any }> => {
+    // 1. Sync to offlineStorage first for instant local availability
+    const localResult = offlineStorage.restoreFullDatabase(payload);
+    try {
+      // 2. Sync to server
+      const serverResult = await request<{ success: boolean; counts: any }>('/api/backup/restore', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      return serverResult;
+    } catch (err: any) {
+      // If server unreachable or error, local restore succeeded
+      return localResult;
+    }
+  },
+
+  restoreBackupPoint: async (id: string): Promise<{ success: boolean; counts: any }> => {
+    try {
+      if (id.startsWith('backup_local_')) {
+        return offlineStorage.restoreClientBackup(id);
+      }
+      const res = await request<{ success: boolean; counts: any }>('/api/backup/restore-point', {
+        method: 'POST',
+        body: JSON.stringify({ id }),
+      });
+      // reload remote data into offline storage
+      const full = await request<BackupExportData>('/api/backup/export');
+      if (full && full.data) {
+        offlineStorage.syncFromRemote(full.data);
+      }
+      return res;
+    } catch (err: any) {
+      if (id.startsWith('backup_local_')) {
+        return offlineStorage.restoreClientBackup(id);
       }
       throw err;
     }
