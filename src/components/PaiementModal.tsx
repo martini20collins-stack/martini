@@ -169,8 +169,8 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
               <input
                 id="input-montant-paiement"
                 type="number"
-                min="100"
-                step="100"
+                min="0"
+                step="any"
                 required
                 value={montant || ''}
                 onChange={(e) => {

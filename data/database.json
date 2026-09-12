@@ -1,0 +1,469 @@
+{
+  "clients": [
+    {
+      "id_client": "CLI-001",
+      "nom": "Client Normal 1 (M. Rakoto)",
+      "type_client": "Normal",
+      "telephone": "+261 32 11 234 56",
+      "adresse": "Isoraka, Antananarivo",
+      "email": "rakoto.normal1@mail.mg",
+      "observation": "Client régulier semaine",
+      "date_creation": "2026-08-01"
+    },
+    {
+      "id_client": "CLI-002",
+      "nom": "Client Normal 2 (Mme Rasoa)",
+      "type_client": "Normal",
+      "telephone": "+261 33 44 567 89",
+      "adresse": "Ampefiloha, Antananarivo",
+      "email": "rasoa.normal2@mail.mg",
+      "observation": "Société partenaire",
+      "date_creation": "2026-08-05"
+    },
+    {
+      "id_client": "CLI-KOSPAM",
+      "nom": "Garage Kospam",
+      "type_client": "Kospam",
+      "telephone": "+261 34 55 678 90",
+      "adresse": "Zone Industrielle Ankorondrano, Antananarivo",
+      "email": "contact@garagekospam.mg",
+      "observation": "Partenaire atelier mécanique & carrosserie Kospam",
+      "date_creation": "2026-07-15"
+    }
+  ],
+  "vehicules": [
+    {
+      "id_vehicule": "VEH-001",
+      "immatriculation": "1234 TAB",
+      "marque": "Toyota",
+      "modele": "Corolla",
+      "categorie": "Véhicule léger",
+      "id_client": "CLI-001",
+      "observation": "Voiture de ville berline",
+      "date_creation": "2026-08-01"
+    },
+    {
+      "id_vehicule": "VEH-002",
+      "immatriculation": "5678 TAC",
+      "marque": "Toyota",
+      "modele": "Hilux",
+      "categorie": "4x4",
+      "id_client": "CLI-002",
+      "observation": "Pick-up tout terrain",
+      "date_creation": "2026-08-05"
+    },
+    {
+      "id_vehicule": "VEH-003",
+      "immatriculation": "9012 TAD",
+      "marque": "Renault",
+      "modele": "Master",
+      "categorie": "Camionnette",
+      "id_client": "CLI-KOSPAM",
+      "observation": "Fourgon utilitaire Kospam",
+      "date_creation": "2026-08-10"
+    },
+    {
+      "id_vehicule": "VEH-004",
+      "immatriculation": "3456 TAE",
+      "marque": "Mercedes",
+      "modele": "Bus",
+      "categorie": "Bus",
+      "id_client": "CLI-002",
+      "observation": "Minibus transport",
+      "date_creation": "2026-08-12"
+    },
+    {
+      "id_vehicule": "VEH-005",
+      "immatriculation": "7890 TAF",
+      "marque": "Renault",
+      "modele": "Truck",
+      "categorie": "Camion",
+      "id_client": "CLI-KOSPAM",
+      "observation": "Poids lourd dépannage Kospam",
+      "date_creation": "2026-08-15"
+    },
+    {
+      "id_vehicule": "VEH-006",
+      "immatriculation": "2468 TAG",
+      "marque": "Peugeot",
+      "modele": "208",
+      "categorie": "Véhicule léger",
+      "id_client": "CLI-KOSPAM",
+      "observation": "Véhicule en réparation Kospam",
+      "date_creation": "2026-08-18"
+    }
+  ],
+  "places": [
+    {
+      "id_place": "PLC-001",
+      "numero_place": "P-01",
+      "statut": "Occupée",
+      "id_stationnement_actuel": "ST-001",
+      "immatriculation_actuelle": "5678 TAC"
+    },
+    {
+      "id_place": "PLC-002",
+      "numero_place": "P-02",
+      "statut": "Occupée",
+      "id_stationnement_actuel": "ST-002",
+      "immatriculation_actuelle": "9012 TAD"
+    },
+    {
+      "id_place": "PLC-003",
+      "numero_place": "P-03",
+      "statut": "Occupée",
+      "id_stationnement_actuel": "ST-003",
+      "immatriculation_actuelle": "1234 TAB"
+    },
+    {
+      "id_place": "PLC-004",
+      "numero_place": "P-04",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-005",
+      "numero_place": "P-05",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-006",
+      "numero_place": "P-06",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-007",
+      "numero_place": "P-07",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-008",
+      "numero_place": "P-08",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-009",
+      "numero_place": "P-09",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-010",
+      "numero_place": "P-10",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-011",
+      "numero_place": "P-11",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-012",
+      "numero_place": "P-12",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-013",
+      "numero_place": "P-13",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-014",
+      "numero_place": "P-14",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-015",
+      "numero_place": "P-15",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-016",
+      "numero_place": "P-16",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-017",
+      "numero_place": "P-17",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-018",
+      "numero_place": "P-18",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-019",
+      "numero_place": "P-19",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    },
+    {
+      "id_place": "PLC-020",
+      "numero_place": "P-20",
+      "statut": "Libre",
+      "id_stationnement_actuel": null,
+      "immatriculation_actuelle": null
+    }
+  ],
+  "stationnements": [
+    {
+      "id_stationnement": "ST-001",
+      "id_vehicule": "VEH-002",
+      "id_place": "PLC-001",
+      "date_entree": "2026-08-26",
+      "heure_entree": "08:15",
+      "date_sortie": null,
+      "heure_sortie": null,
+      "reparation": true,
+      "montant_du": 5000,
+      "montant_paye": 2000,
+      "reste_a_payer": 3000,
+      "statut": "Présent",
+      "statut_paiement": "Partiellement payé",
+      "observation": "Révision freins et stationnement journée"
+    },
+    {
+      "id_stationnement": "ST-002",
+      "id_vehicule": "VEH-003",
+      "id_place": "PLC-002",
+      "date_entree": "2026-08-26",
+      "heure_entree": "09:00",
+      "date_sortie": null,
+      "heure_sortie": null,
+      "reparation": true,
+      "montant_du": 5000,
+      "montant_paye": 5000,
+      "reste_a_payer": 0,
+      "statut": "Présent",
+      "statut_paiement": "Payé",
+      "observation": "Remplacement alternateur Kospam"
+    },
+    {
+      "id_stationnement": "ST-003",
+      "id_vehicule": "VEH-001",
+      "id_place": "PLC-003",
+      "date_entree": "2026-08-26",
+      "heure_entree": "10:30",
+      "date_sortie": null,
+      "heure_sortie": null,
+      "reparation": false,
+      "montant_du": 3000,
+      "montant_paye": 0,
+      "reste_a_payer": 3000,
+      "statut": "Présent",
+      "statut_paiement": "Non payé",
+      "observation": "Stationnement après-midi"
+    },
+    {
+      "id_stationnement": "ST-004",
+      "id_vehicule": "VEH-005",
+      "id_place": null,
+      "date_entree": "2026-08-25",
+      "heure_entree": "07:45",
+      "date_sortie": "2026-08-25",
+      "heure_sortie": "18:30",
+      "reparation": true,
+      "montant_du": 5000,
+      "montant_paye": 5000,
+      "reste_a_payer": 0,
+      "statut": "Sorti",
+      "statut_paiement": "Payé",
+      "observation": "Maintenance terminée et véhicule récupéré"
+    },
+    {
+      "id_stationnement": "ST-005",
+      "id_vehicule": "VEH-004",
+      "id_place": null,
+      "date_entree": "2026-08-25",
+      "heure_entree": "08:00",
+      "date_sortie": "2026-08-25",
+      "heure_sortie": "17:00",
+      "reparation": true,
+      "montant_du": 5000,
+      "montant_paye": 5000,
+      "reste_a_payer": 0,
+      "statut": "Sorti",
+      "statut_paiement": "Payé",
+      "observation": "Diagnostic injection"
+    }
+  ],
+  "paiements": [
+    {
+      "id_paiement": "PAY-001",
+      "id_stationnement": "ST-001",
+      "date_paiement": "2026-08-26 08:20:00",
+      "montant": 2000,
+      "mode_paiement": "Espèces",
+      "reference": "ESP-8812",
+      "observation": "Acompte versé à l’entrée"
+    },
+    {
+      "id_paiement": "PAY-002",
+      "id_stationnement": "ST-002",
+      "date_paiement": "2026-08-26 09:05:00",
+      "montant": 5000,
+      "mode_paiement": "Mobile Money",
+      "reference": "MM-KOSPAM-991",
+      "observation": "Paiement intégral Mvola Kospam"
+    },
+    {
+      "id_paiement": "PAY-003",
+      "id_stationnement": "ST-004",
+      "date_paiement": "2026-08-25 18:25:00",
+      "montant": 5000,
+      "mode_paiement": "Virement",
+      "reference": "VIR-BNI-4421",
+      "observation": "Règlement virement bancaire"
+    },
+    {
+      "id_paiement": "PAY-004",
+      "id_stationnement": "ST-005",
+      "date_paiement": "2026-08-25 16:50:00",
+      "montant": 5000,
+      "mode_paiement": "Espèces",
+      "reference": "ESP-8790",
+      "observation": "Règlement sortie bus"
+    }
+  ],
+  "portefeuille": [
+    {
+      "id_mouvement": "MVT-INIT",
+      "date": "2026-09-12 00:00:00",
+      "type_mouvement": "Solde initial",
+      "reference": "SOLDE-INITIAL",
+      "entree": 150000,
+      "sortie": 0,
+      "solde": 150000,
+      "motif": "Solde initial de trésorerie disponible au démarrage",
+      "observation": "Test solde initial",
+      "categorie": "Solde de départ"
+    },
+    {
+      "id_mouvement": "MVT-001",
+      "date": "2026-08-25 07:00:00",
+      "type_mouvement": "Autre entrée",
+      "reference": "FOND-CAISSE",
+      "entree": 50000,
+      "sortie": 0,
+      "motif": "Fond de caisse initial",
+      "observation": "Ouverture de caisse gérant",
+      "solde": 200000
+    },
+    {
+      "id_mouvement": "MVT-002",
+      "date": "2026-08-25 16:50:00",
+      "type_mouvement": "Encaissement parking",
+      "reference": "PAY-004",
+      "entree": 5000,
+      "sortie": 0,
+      "motif": "Paiement stationnement ST-005 (Mercedes Bus)",
+      "observation": "Espèces",
+      "id_paiement": "PAY-004",
+      "solde": 205000
+    },
+    {
+      "id_mouvement": "MVT-003",
+      "date": "2026-08-25 17:30:00",
+      "type_mouvement": "Dépense",
+      "reference": "DEP-TICKET-01",
+      "entree": 0,
+      "sortie": 10000,
+      "motif": "Achat rouleaux papier thermique pour tickets",
+      "observation": "Fournitures de caisse",
+      "solde": 195000
+    },
+    {
+      "id_mouvement": "MVT-004",
+      "date": "2026-08-25 18:25:00",
+      "type_mouvement": "Encaissement parking",
+      "reference": "PAY-003",
+      "entree": 5000,
+      "sortie": 0,
+      "motif": "Paiement stationnement ST-004 (Truck Kospam)",
+      "observation": "Virement",
+      "id_paiement": "PAY-003",
+      "solde": 200000
+    },
+    {
+      "id_mouvement": "MVT-005",
+      "date": "2026-08-26 08:20:00",
+      "type_mouvement": "Encaissement parking",
+      "reference": "PAY-001",
+      "entree": 2000,
+      "sortie": 0,
+      "motif": "Acompte stationnement ST-001 (Toyota Hilux)",
+      "observation": "Espèces",
+      "id_paiement": "PAY-001",
+      "solde": 202000
+    },
+    {
+      "id_mouvement": "MVT-006",
+      "date": "2026-08-26 09:05:00",
+      "type_mouvement": "Encaissement parking",
+      "reference": "PAY-002",
+      "entree": 5000,
+      "sortie": 0,
+      "motif": "Paiement stationnement ST-002 (Renault Master Kospam)",
+      "observation": "Mobile Money",
+      "id_paiement": "PAY-002",
+      "solde": 207000
+    },
+    {
+      "id_mouvement": "MVT-0008",
+      "date": "2026-09-12 07:33:14",
+      "type_mouvement": "Ancienne recette",
+      "reference": "REF-MVT-0008",
+      "entree": 50000,
+      "sortie": 0,
+      "solde": 257000,
+      "motif": "Recette parking hier",
+      "observation": "",
+      "categorie": "Recette"
+    }
+  ],
+  "parametres": {
+    "nom_parking": "Parking Privé Central",
+    "telephone_parking": "+261 34 00 123 45",
+    "adresse_parking": "Analakely, Antananarivo 101, Madagascar",
+    "devise": "Ar",
+    "tarifs": {
+      "stationnement_base": 3000,
+      "majoration_reparation_normal_leger": 0,
+      "majoration_reparation_normal_autre": 2000,
+      "majoration_reparation_kospam": 2000
+    },
+    "nombre_total_places": 20,
+    "solde_initial": 150000,
+    "date_solde_initial": "2026-09-12"
+  }
+}

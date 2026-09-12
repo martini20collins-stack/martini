@@ -543,7 +543,7 @@ export const EntreeRapideModal: React.FC<EntreeRapideModalProps> = ({
                     id="input-montant-a-payer"
                     type="number"
                     min="0"
-                    step="500"
+                    step="any"
                     value={montantAPayer}
                     onChange={(e) => {
                       const val = Number(e.target.value) || 0;
@@ -570,7 +570,7 @@ export const EntreeRapideModal: React.FC<EntreeRapideModalProps> = ({
                     id="input-montant-paye"
                     type="number"
                     min="0"
-                    step="500"
+                    step="any"
                     value={montantPaye}
                     onChange={(e) => setMontantPaye(Number(e.target.value) || 0)}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl font-black text-lg text-white focus:ring-2 focus:ring-emerald-500"

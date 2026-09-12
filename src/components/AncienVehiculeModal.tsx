@@ -415,7 +415,7 @@ export const AncienVehiculeModal: React.FC<AncienVehiculeModalProps> = ({
               <input
                 type="number"
                 min="0"
-                step="500"
+                step="any"
                 value={montantDu}
                 onChange={(e) => setMontantDu(Number(e.target.value))}
                 className="w-full px-3 py-2 font-mono font-black text-sm bg-white border border-amber-300 rounded-xl text-slate-900"
@@ -428,7 +428,7 @@ export const AncienVehiculeModal: React.FC<AncienVehiculeModalProps> = ({
               <input
                 type="number"
                 min="0"
-                step="500"
+                step="any"
                 value={montantPaye}
                 onChange={(e) => setMontantPaye(Number(e.target.value))}
                 className="w-full px-3 py-2 font-mono font-black text-sm bg-white border border-amber-300 rounded-xl text-emerald-800"

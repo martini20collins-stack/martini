@@ -265,19 +265,20 @@ export function App() {
           <PWAInstallButton />
 
           {/* Live Portefeuille Solde Pill */}
-          <div
+          <button
+            id="btn-topbar-tresorerie"
             onClick={() => setActiveSection('tresorerie')}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl cursor-pointer transition-colors"
-            title="Cliquer pour gérer la trésorerie"
+            className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
+            title="Cliquer pour ouvrir la Trésorerie"
           >
-            <Wallet className="w-4 h-4 text-emerald-600" />
-            <div className="text-xs">
-              <span className="text-slate-400 font-medium mr-1">Trésorerie:</span>
-              <span className="font-black text-slate-900">
+            <Wallet className="w-4 h-4 text-emerald-700 shrink-0" />
+            <div className="text-xs text-left">
+              <span className="text-emerald-800 font-bold hidden sm:inline mr-1">Trésorerie:</span>
+              <span className="font-black text-emerald-950">
                 {formatAriary(portefeuille.solde)}
               </span>
             </div>
-          </div>
+          </button>
 
           {/* Quick Refresh */}
           <button
